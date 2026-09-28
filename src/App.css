@@ -714,6 +714,14 @@ html, body {
   color: var(--terracotta);
 }
 
+.weekday-short {
+  display: none;
+}
+
+.weekday-full {
+  display: inline;
+}
+
 .calendar-days-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -1334,7 +1342,7 @@ html, body {
 }
 
 /* ====================================================================
-   МОДАЛЬНЫЕ ОКНА
+   МОДАЛЬНЫЕ ОКНА (КАРТОЧКА ПОСТА И АВТОРИЗАЦИЯ)
    ==================================================================== */
 .modal-backdrop {
   position: fixed;
@@ -1342,13 +1350,14 @@ html, body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(25, 38, 30, 0.55);
-  backdrop-filter: blur(4px);
+  background: rgba(25, 38, 30, 0.6);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 14px;
+  z-index: 2000;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .modal-card {
@@ -1366,38 +1375,69 @@ html, body {
   box-sizing: border-box;
 }
 
-.modal-header {
+/* Шапка карточки поста с цветной бренд-полосой */
+.modal-header-banner {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-cream);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
   position: sticky;
   top: 0;
-  background: #ffffff;
+  background: #faf8f5;
   z-index: 10;
+  border-top: 4px solid var(--pine-deep);
+}
+
+.modal-header-banner.banner-tea {
+  border-top-color: var(--tea-amber);
+}
+
+.modal-header-banner.banner-fair {
+  border-top-color: var(--pine-deep);
 }
 
 .modal-header-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 
-.modal-header h3 {
+.modal-category-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--pine-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.banner-tea .modal-category-badge {
+  color: var(--tea-amber);
+}
+
+.modal-title-text {
   font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 700;
-  color: var(--pine-deep);
+  color: var(--text-main);
+  line-height: 1.25;
+  margin-top: 2px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .modal-close-btn {
   background: #ede8df;
   border: none;
   border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1412,53 +1452,145 @@ html, body {
   color: #ffffff;
 }
 
-.modal-body {
-  padding: 18px 20px;
+/* Тело формы и полей */
+.modal-form-body {
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 100%;
-}
-
-.form-group label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--pine-deep);
-}
-
-.form-input, .form-textarea, .form-select {
-  border: 1px solid var(--border-cream);
-  border-radius: var(--radius-md);
-  padding: 9px 12px;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  color: var(--text-main);
-  background: #faf8f5;
-  transition: all 0.15s ease;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.form-input:focus, .form-textarea:focus, .form-select:focus {
-  outline: none;
-  border-color: var(--pine-deep);
+  gap: 16px;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(35, 62, 47, 0.1);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .form-row-2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pine-deep);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Крафтовые поля ввода (строго светлый фон, никакой темноты) */
+.craft-input, .craft-select, .craft-textarea {
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: #1d241f !important;
+  background-color: #faf8f5 !important;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+
+.craft-input.font-bold {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.craft-input:focus, .craft-select:focus, .craft-textarea:focus {
+  outline: none;
+  border-color: var(--pine-deep);
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(35, 62, 47, 0.1);
+}
+
+.craft-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Блоки просмотра для режима чтения */
+.readonly-value {
+  background: #faf8f5;
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.readonly-box {
+  background: #faf8f5;
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Блок ссылки на черновик ВК */
+.highlight-field {
+  background: #f4f8ff;
+  border: 1px solid #c7dcff;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-sizing: border-box;
+}
+
+.label-vk {
+  color: var(--vk-blue) !important;
+}
+
+.btn-vk-large {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--vk-blue);
+  color: #ffffff !important;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 119, 255, 0.25);
+}
+
+.btn-vk-large:hover {
+  background: var(--vk-hover);
+  box-shadow: 0 4px 12px rgba(0, 119, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.no-link-msg {
+  font-size: 12px;
+  color: #4b6b94;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* Футер модалки */
 .modal-footer {
   padding: 14px 20px;
   border-top: 1px solid var(--border-cream);
@@ -1468,18 +1600,31 @@ html, body {
   background: #faf8f5;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.btn-delete-post {
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: #fde8e8;
   color: #c81e1e;
   border: 1px solid #f8b4b4;
-  padding: 7px 12px;
+  padding: 8px 14px;
   border-radius: var(--radius-md);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-delete:hover {
+  background: #fbd5d5;
 }
 
 .footer-right-buttons {
@@ -1492,70 +1637,103 @@ html, body {
 .btn-secondary {
   background: #ede8df;
   color: var(--text-main);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #e2dbcf;
 }
 
 .btn-save {
   background: var(--pine-deep);
   color: #ffffff;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
 }
 
-/* Модалка входа */
+.btn-save:hover {
+  background: var(--pine-hover);
+  transform: translateY(-1px);
+}
+
+/* ====================================================================
+   МОДАЛЬНОЕ ОКНО: ВХОД ДЛЯ РЕДАКТОРОВ
+   ==================================================================== */
 .auth-modal-card {
-  max-width: 380px;
+  max-width: 400px;
 }
 
 .auth-header {
-  padding: 20px 20px 10px;
+  padding: 24px 20px 14px;
   text-align: center;
   position: relative;
   border-bottom: 1px solid var(--border-cream);
+  background: #faf8f5;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .auth-icon-wrap {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--pine-soft);
-  margin: 0 auto 8px;
+  margin: 0 auto 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--pine-deep);
 }
 
 .auth-header h3 {
   font-family: var(--font-serif);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--pine-deep);
+  margin-bottom: 4px;
 }
 
 .auth-header p {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
 .auth-header .modal-close-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
 }
 
 .auth-error-badge {
   background: #fde8e8;
   color: #c81e1e;
   border: 1px solid #f8b4b4;
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 11.5px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
   font-weight: 600;
+  text-align: center;
 }
 
 .auth-submit-btn {
   width: 100%;
   justify-content: center;
-  padding: 9px 14px;
-  margin-top: 4px;
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 6px;
 }
 
 /* ====================================================================
@@ -1766,6 +1944,15 @@ html, body {
     padding: 4px 0;
   }
 
+  .weekday-full {
+    display: none;
+  }
+
+  .weekday-short {
+    display: inline;
+    font-weight: 700;
+  }
+
   /* В режиме сетки на мобильных разрешен горизонтальный скролл */
   .calendar-container {
     overflow-x: auto;
@@ -1775,6 +1962,51 @@ html, body {
   }
 
   .weekdays-grid, .calendar-days-grid {
-    min-width: 560px;
+    min-width: 660px;
+  }
+
+  /* Мобильная адаптация модальных окон */
+  .modal-backdrop {
+    padding: 10px;
+  }
+
+  .modal-card {
+    max-width: 100%;
+    max-height: 94vh;
+    border-radius: var(--radius-md);
+  }
+
+  .modal-header-banner {
+    padding: 12px 14px;
+  }
+
+  .modal-title-text {
+    font-size: 16px;
+  }
+
+  .modal-form-body {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .modal-footer {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .footer-right-buttons {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .btn-delete {
+    width: 100%;
+    justify-content: center;
   }
 }

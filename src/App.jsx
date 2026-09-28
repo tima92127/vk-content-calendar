@@ -602,13 +602,13 @@ export default function App() {
 
           {/* Заголовки дней недели */}
           <div className="weekdays-grid">
-            <div className="weekday-cell">Понедельник</div>
-            <div className="weekday-cell">Вторник</div>
-            <div className="weekday-cell">Среда</div>
-            <div className="weekday-cell">Четверг</div>
-            <div className="weekday-cell">Пятница</div>
-            <div className="weekday-cell weekend-cell">Суббота</div>
-            <div className="weekday-cell weekend-cell">Воскресенье</div>
+            <div className="weekday-cell"><span className="weekday-full">Понедельник</span><span className="weekday-short">Пн</span></div>
+            <div className="weekday-cell"><span className="weekday-full">Вторник</span><span className="weekday-short">Вт</span></div>
+            <div className="weekday-cell"><span className="weekday-full">Среда</span><span className="weekday-short">Ср</span></div>
+            <div className="weekday-cell"><span className="weekday-full">Четверг</span><span className="weekday-short">Чт</span></div>
+            <div className="weekday-cell"><span className="weekday-full">Пятница</span><span className="weekday-short">Пт</span></div>
+            <div className="weekday-cell weekend-cell"><span className="weekday-full">Суббота</span><span className="weekday-short">Сб</span></div>
+            <div className="weekday-cell weekend-cell"><span className="weekday-full">Воскресенье</span><span className="weekday-short">Вс</span></div>
           </div>
 
           {/* Сетка ячеек дней */}
