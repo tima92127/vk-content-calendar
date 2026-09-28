@@ -23,7 +23,8 @@ import {
   Smartphone,
   Share2,
   Sparkles,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Lightbulb
 } from 'lucide-react';
 
 // Фирменные векторные иконки брендов
@@ -47,6 +48,113 @@ const TeaLeafIcon = ({ size = 13, className = "" }) => (
   </svg>
 );
 
+// СЛОВАРЬ СТАТУСОВ ПУБЛИКАЦИЙ
+const POST_STATUSES = {
+  planned: {
+    id: 'planned',
+    label: 'В плане',
+    badge: '📝 В плане',
+    short: '📝 В плане',
+    color: '#524b42',
+    bg: '#f5f2eb',
+    border: '#dcd5ca'
+  },
+  review: {
+    id: 'review',
+    label: 'На обсуждении',
+    badge: '💬 На обсуждении',
+    short: '💬 Обсуждение',
+    color: '#92400e',
+    bg: '#fef3c7',
+    border: '#fcd34d'
+  },
+  field_trip: {
+    id: 'field_trip',
+    label: 'Выезд / Локация',
+    badge: '🚗 Выезд',
+    short: '🚗 Выезд',
+    color: '#0369a1',
+    bg: '#e0f2fe',
+    border: '#7dd3fc'
+  },
+  shooting: {
+    id: 'shooting',
+    label: 'Съёмка контента',
+    badge: '📸 Съёмка',
+    short: '📸 Съёмка',
+    color: '#0891b2',
+    bg: '#ecfeff',
+    border: '#a5f3fc'
+  },
+  in_progress: {
+    id: 'in_progress',
+    label: 'В работе (текст / визуал)',
+    badge: '🎨 В работе',
+    short: '🎨 В работе',
+    color: '#6d28d9',
+    bg: '#f3e8ff',
+    border: '#d8b4fe'
+  },
+  approved: {
+    id: 'approved',
+    label: 'Утверждён',
+    badge: '✨ Утверждён',
+    short: '✨ Утверждён',
+    color: '#15803d',
+    bg: '#dcfce7',
+    border: '#86efac'
+  },
+  draft: {
+    id: 'draft',
+    label: 'Черновик в ВК готов',
+    badge: '⏳ Черновик в ВК',
+    short: '⏳ Черновик',
+    color: '#0077ff',
+    bg: '#e8f2ff',
+    border: '#bae6fd'
+  },
+  draft_vk: {
+    id: 'draft',
+    label: 'Черновик в ВК готов',
+    badge: '⏳ Черновик в ВК',
+    short: '⏳ Черновик',
+    color: '#0077ff',
+    bg: '#e8f2ff',
+    border: '#bae6fd'
+  },
+  published: {
+    id: 'published',
+    label: 'Опубликован',
+    badge: '✅ Опубликован',
+    short: '✅ Вышел',
+    color: '#166534',
+    bg: '#f0fdf4',
+    border: '#bbf7d0'
+  },
+  idea: {
+    id: 'idea',
+    label: 'Идея (без даты)',
+    badge: '💡 Идея',
+    short: '💡 Идея',
+    color: '#b45309',
+    bg: '#fef9c3',
+    border: '#fde047'
+  },
+  paused: {
+    id: 'paused',
+    label: 'Отложен / В архив',
+    badge: '⏸️ Отложен',
+    short: '⏸️ Отложен',
+    color: '#4b5563',
+    bg: '#f3f4f6',
+    border: '#d1d5db'
+  }
+};
+
+const getStatusInfo = (statusKey) => {
+  return POST_STATUSES[statusKey] || POST_STATUSES.planned;
+};
+
 export default function App() {
   const [posts, setPosts] = useState([]);
   const [milestones, setMilestones] = useState([]);
@@ -54,6 +162,11 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
   const [showPwaTip, setShowPwaTip] = useState(true);
+  
+  // Колонка идей для постов (бэклог тем без даты)
+  const [showIdeasSidebar, setShowIdeasSidebar] = useState(() => (typeof window !== 'undefined' && window.innerWidth >= 1024));
+  const [ideasFilter, setIdeasFilter] = useState('all');
+  const [dragOverIdeas, setDragOverIdeas] = useState(false);
   
   // Режим отображения: 'calendar' (сетка месяца) или 'feed' (лента по дням для мобильных)
   const [viewMode, setViewMode] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 820 ? 'feed' : 'calendar'));
@@ -228,8 +341,11 @@ export default function App() {
     const movingPost = posts.find(p => p.id === postId);
     if (movingPost && movingPost.date === targetDateStr) return;
 
+    // Если пост был идеей (status === 'idea'), то при переносе на дату статус переводим в 'planned'
+    const newStatus = (movingPost && movingPost.status === 'idea') ? 'planned' : (movingPost?.status || 'planned');
+
     // Оптимистичное локальное обновление UI
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: targetDateStr } : p));
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: targetDateStr, status: newStatus } : p));
 
     const dateFormatted = new Date(targetDateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
     showToast(`📍 Публикация перенесена на ${dateFormatted}`);
@@ -240,13 +356,35 @@ export default function App() {
     // Запись в Supabase
     const { error } = await supabase
       .from('posts')
-      .update({ date: targetDateStr, updated_at: new Date().toISOString() })
+      .update({ date: targetDateStr, status: newStatus, updated_at: new Date().toISOString() })
       .eq('id', postId);
 
     if (error) {
       console.error('Ошибка сохранения переноса:', error);
       fetchPosts();
       showToast('⚠️ Ошибка сохранения переноса');
+    }
+  };
+
+  // ПЕРЕНОС ПУБЛИКАЦИИ В БАНК ИДЕЙ (СНЯТИЕ С ДАТЫ)
+  const movePostToIdeas = async (postId) => {
+    if (!postId) return;
+    const movingPost = posts.find(p => p.id === postId);
+    if (movingPost && movingPost.status === 'idea' && !movingPost.date) return;
+
+    // Оптимистичное обновление UI
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: null, status: 'idea' } : p));
+    showToast(`💡 Пост перенесён в Банк идей`);
+
+    const { error } = await supabase
+      .from('posts')
+      .update({ date: null, status: 'idea', updated_at: new Date().toISOString() })
+      .eq('id', postId);
+
+    if (error) {
+      console.error('Ошибка переноса в идеи:', error);
+      fetchPosts();
+      showToast('⚠️ Ошибка переноса в идеи');
     }
   };
 
@@ -275,6 +413,17 @@ export default function App() {
     setDraggedPostId(null);
     if (postId) {
       await movePostToDate(postId, targetDateStr);
+    }
+  };
+
+  const handleDropToIdeas = async (e) => {
+    if (!editMode) return;
+    e.preventDefault();
+    setDragOverIdeas(false);
+    const postId = e.dataTransfer.getData('text/plain') || draggedPostId;
+    setDraggedPostId(null);
+    if (postId) {
+      await movePostToIdeas(postId);
     }
   };
 
@@ -368,10 +517,10 @@ export default function App() {
     setIsNewPost(false);
     setModalForm({
       title: post.title || '',
-      date: post.date || '2026-10-01',
+      date: post.date || '',
       time: post.time || '10:30',
       project: post.project || 'fair',
-      status: post.status || 'planned',
+      status: post.status || (post.date ? 'planned' : 'idea'),
       vk_draft_url: post.vk_draft_url || '',
       meaning: post.meaning || '',
       visual: post.visual || '',
@@ -399,6 +548,25 @@ export default function App() {
     setIsEditModalOpen(true);
   };
 
+  // СОЗДАНИЕ НОВОЙ ИДЕИ В БЭКЛОГ
+  const openNewIdeaModal = (project = 'fair') => {
+    if (!editMode) return;
+    setSelectedPost(null);
+    setIsNewPost(true);
+    setModalForm({
+      title: '',
+      date: '',
+      time: '11:00',
+      project: project,
+      status: 'idea',
+      vk_draft_url: '',
+      meaning: '',
+      visual: '',
+      cta: ''
+    });
+    setIsEditModalOpen(true);
+  };
+
   // СОХРАНЕНИЕ
   const savePostChanges = async (e) => {
     e.preventDefault();
@@ -406,8 +574,8 @@ export default function App() {
 
     const payload = {
       title: modalForm.title,
-      date: modalForm.date,
-      time: modalForm.time,
+      date: modalForm.date && modalForm.date.trim() ? modalForm.date : null,
+      time: modalForm.time || '10:30',
       project: modalForm.project,
       status: modalForm.status,
       vk_draft_url: modalForm.vk_draft_url?.trim() || null,
@@ -605,11 +773,25 @@ export default function App() {
     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
   ];
 
-  // Фильтрация
-  const fairCount = posts.filter(p => p.project === 'fair').length;
-  const teaCount = posts.filter(p => p.project === 'tea').length;
+  // Разделение постов: Банк идей (без даты или status === 'idea') и Календарные посты
+  const ideaPosts = posts.filter(p => !p.date || p.status === 'idea');
+  const calendarPosts = posts.filter(p => p.date && p.status !== 'idea');
 
-  const filteredPostsList = posts.filter(p => {
+  // Фильтрация идей для боковой колонки
+  const filteredIdeas = ideaPosts.filter(p => {
+    if (ideasFilter !== 'all' && p.project !== ideasFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return p.title?.toLowerCase().includes(q) || p.meaning?.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  // Фильтрация для календаря
+  const fairCount = calendarPosts.filter(p => p.project === 'fair').length;
+  const teaCount = calendarPosts.filter(p => p.project === 'tea').length;
+
+  const filteredPostsList = calendarPosts.filter(p => {
     if (filter !== 'all' && p.project !== filter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -622,10 +804,10 @@ export default function App() {
 
   // Проверка постов на текущий отображаемый месяц
   const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const postsInCurrentMonth = posts.filter(p => p.date.startsWith(currentMonthPrefix));
+  const postsInCurrentMonth = calendarPosts.filter(p => p.date && p.date.startsWith(currentMonthPrefix));
 
   // Посты и вехи для выбранного дня в мобильной сетке
-  const selectedDayPosts = posts.filter(p => {
+  const selectedDayPosts = calendarPosts.filter(p => {
     if (p.date !== selectedGridDate) return false;
     if (filter !== 'all' && p.project !== filter) return false;
     if (searchQuery.trim()) {
@@ -639,8 +821,13 @@ export default function App() {
     return selectedGridDate >= m.date_start && selectedGridDate <= m.date_end;
   });
 
+  // Свободные дни в Октябре для быстрого заполнения слотов идеями
+  const emptyOctoberDays = [
+    '2026-10-12', '2026-10-14', '2026-10-15', '2026-10-19', '2026-10-22', '2026-10-23', '2026-10-26', '2026-10-29', '2026-10-30'
+  ].filter(d => !calendarPosts.some(p => p.date === d));
+
   // Группировка для мобильного вида (Feed / Agenda)
-  const uniqueDates = [...new Set(posts.map(p => p.date))].sort();
+  const uniqueDates = [...new Set(calendarPosts.map(p => p.date))].filter(Boolean).sort();
   const feedDates = uniqueDates.filter(d => {
     if (selectedWeek === 'w1') return d >= '2026-09-28' && d <= '2026-10-04';
     if (selectedWeek === 'w2') return d >= '2026-10-05' && d <= '2026-10-11';
@@ -783,6 +970,16 @@ export default function App() {
           </button>
         </div>
 
+        {/* Кнопка Банка идей */}
+        <button 
+          className={`btn-ideas-toggle ${showIdeasSidebar ? 'active' : ''}`}
+          onClick={() => setShowIdeasSidebar(!showIdeasSidebar)}
+          title="Открыть / скрыть боковую панель банка идей"
+        >
+          <Lightbulb size={14} />
+          <span>Идеи ({ideaPosts.length})</span>
+        </button>
+
         {/* Селектор месяцев (в режиме календаря) */}
         {viewMode === 'calendar' && (
           <div className="calendar-nav">
@@ -810,7 +1007,7 @@ export default function App() {
             className={`chip chip-all ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
           >
-            <Layers size={13} /> Все <span className="chip-count">{posts.length}</span>
+            <Layers size={13} /> Все <span className="chip-count">{calendarPosts.length}</span>
           </button>
           <button 
             className={`chip chip-fair ${filter === 'fair' ? 'active' : ''}`}
@@ -856,7 +1053,178 @@ export default function App() {
           РЕЖИМ 1: СЕТКА МЕСЯЦА (DESKTOP & ПЛАНШЕТЫ)
           ======================================================== */}
       {viewMode === 'calendar' && (
-        <main className="calendar-container">
+        <div className={`calendar-workspace ${showIdeasSidebar ? 'has-ideas-sidebar' : ''}`}>
+          {/* БОКОВАЯ ПАНЕЛЬ / КОЛОНКА ИДЕЙ */}
+          {showIdeasSidebar && (
+            <aside 
+              className={`ideas-sidebar ${dragOverIdeas ? 'drag-over' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOverIdeas(true); }}
+              onDragLeave={() => setDragOverIdeas(false)}
+              onDrop={handleDropToIdeas}
+            >
+              <div className="ideas-sidebar-header">
+                <div className="ideas-title-row">
+                  <div className="ideas-badge">
+                    <Lightbulb size={16} className="ideas-bulb-icon" />
+                    <h2 className="ideas-sidebar-title">Банк идей</h2>
+                    <span className="ideas-count-chip">{filteredIdeas.length}</span>
+                  </div>
+                  <div className="ideas-header-actions">
+                    {editMode && (
+                      <button 
+                        className="btn-add-idea" 
+                        onClick={() => openNewIdeaModal(filter === 'tea' ? 'tea' : 'fair')}
+                        title="Добавить новую идею в банк"
+                      >
+                        <Plus size={13} /> Новая
+                      </button>
+                    )}
+                    <button 
+                      className="btn-close-ideas" 
+                      onClick={() => setShowIdeasSidebar(false)}
+                      title="Свернуть колонку идей"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                <p className="ideas-sidebar-subtitle">
+                  Темы без даты от нейросети и команды. Перетаскивайте мышкой на дни календаря.
+                </p>
+
+                {/* Фильтры банка идей */}
+                <div className="ideas-filter-chips">
+                  <button 
+                    className={`ideas-chip ${ideasFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setIdeasFilter('all')}
+                  >
+                    Все ({ideaPosts.length})
+                  </button>
+                  <button 
+                    className={`ideas-chip ${ideasFilter === 'fair' ? 'active' : ''}`}
+                    onClick={() => setIdeasFilter('fair')}
+                  >
+                    <PineIcon size={11} /> Ярмарка ({ideaPosts.filter(p => p.project === 'fair').length})
+                  </button>
+                  <button 
+                    className={`ideas-chip ${ideasFilter === 'tea' ? 'active' : ''}`}
+                    onClick={() => setIdeasFilter('tea')}
+                  >
+                    <TeaLeafIcon size={11} /> Чайная ({ideaPosts.filter(p => p.project === 'tea').length})
+                  </button>
+                </div>
+
+                {/* Дроп-зона для возврата постов в идеи */}
+                {editMode && (
+                  <div className={`ideas-drop-target ${dragOverIdeas ? 'active' : ''}`}>
+                    <span>📥 Перетащите пост сюда, чтобы вернуть в банк идей</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Список карточек идей */}
+              <div className="ideas-cards-scroll">
+                {filteredIdeas.length === 0 ? (
+                  <div className="ideas-empty-state">
+                    <span>💡 В этой категории пока нет свободных идей.</span>
+                    {editMode && (
+                      <button className="btn btn-outline" style={{ marginTop: '8px' }} onClick={() => openNewIdeaModal('fair')}>
+                        + Создать идею
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  filteredIdeas.map(idea => {
+                    const isFair = idea.project === 'fair';
+                    const statusInfo = getStatusInfo(idea.status);
+                    const isDragging = draggedPostId === idea.id;
+
+                    return (
+                      <div 
+                        key={idea.id}
+                        className={`idea-card ${isFair ? 'post-fair' : 'post-tea'} ${isDragging ? 'is-dragged' : ''} ${editMode ? 'can-drag' : ''}`}
+                        draggable={editMode}
+                        onDragStart={(e) => handleDragStart(e, idea)}
+                        onClick={() => openPostModal(idea)}
+                      >
+                        <div className="idea-card-header">
+                          <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
+                            {isFair ? <><PineIcon size={10} /> Ярмарка</> : <><TeaLeafIcon size={10} /> Чайная</>}
+                          </span>
+                          <span 
+                            className="idea-status-pill"
+                            style={{ 
+                              color: statusInfo.color,
+                              backgroundColor: statusInfo.bg,
+                              borderColor: statusInfo.border
+                            }}
+                          >
+                            {statusInfo.short}
+                          </span>
+                        </div>
+
+                        <h4 className="idea-card-title">{idea.title}</h4>
+
+                        {idea.meaning && (
+                          <p className="idea-card-meaning">{idea.meaning}</p>
+                        )}
+
+                        <div className="idea-card-footer">
+                          {editMode ? (
+                            <div className="idea-assign-row">
+                              <button 
+                                className="btn-assign-slot"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (emptyOctoberDays.length > 0) {
+                                    movePostToDate(idea.id, emptyOctoberDays[0]);
+                                  } else {
+                                    openRescheduleModal(idea);
+                                  }
+                                }}
+                                title={emptyOctoberDays.length > 0 ? `Занять ближайший свободный слот: ${new Date(emptyOctoberDays[0]).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}` : "Назначить дату"}
+                              >
+                                📅 {emptyOctoberDays.length > 0 ? `В слот ${new Date(emptyOctoberDays[0]).getDate()} окт` : 'В календарь ➔'}
+                              </button>
+
+                              <button 
+                                className="btn-assign-custom"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRescheduleModal(idea);
+                                }}
+                                title="Выбрать любую дату"
+                              >
+                                Выбрать день...
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="idea-view-hint">Клик для деталей</span>
+                          )}
+
+                          {editMode && (
+                            <span 
+                              className="drag-handle"
+                              onTouchStart={(e) => handleTouchStart(e, idea)}
+                              onTouchMove={handleTouchMove}
+                              onTouchEnd={handleTouchEnd}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Перетащить на календарь"
+                            >
+                              <GripVertical size={13} />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </aside>
+          )}
+
+          <main className="calendar-container">
           {/* Предупреждение, если выбран пустой месяц */}
           {postsInCurrentMonth.length === 0 && (
             <div className="empty-month-banner">
@@ -886,7 +1254,7 @@ export default function App() {
               const isHovered = dragOverDate === slot.dateStr;
 
               // Посты дня с учетом фильтров
-              const dayPosts = posts.filter(p => {
+              const dayPosts = calendarPosts.filter(p => {
                 if (p.date !== slot.dateStr) return false;
                 if (filter !== 'all' && p.project !== filter) return false;
                 if (searchQuery.trim()) {
@@ -988,8 +1356,6 @@ export default function App() {
                           onDragStart={(e) => handleDragStart(e, post)}
                           onClick={(e) => { e.stopPropagation(); openPostModal(post); }}
                         >
-                          <div className="card-top-stripe" />
-
                           <div className="card-meta">
                             <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
                               {isFair ? (
@@ -1022,8 +1388,21 @@ export default function App() {
                                 <span>Черновик ВК ↗</span>
                               </a>
                             ) : (
-                              <span className="status-label">
-                                {post.status === 'published' ? '✅ Вышел' : '📝 В плане'}
+                              <span 
+                                className="status-label"
+                                style={{
+                                  color: getStatusInfo(post.status).color,
+                                  backgroundColor: getStatusInfo(post.status).bg,
+                                  borderColor: getStatusInfo(post.status).border,
+                                  border: `1px solid ${getStatusInfo(post.status).border}`,
+                                  borderRadius: '3px',
+                                  padding: '1px 5px',
+                                  fontSize: '10px',
+                                  fontWeight: 600
+                                }}
+                                title={getStatusInfo(post.status).label}
+                              >
+                                {getStatusInfo(post.status).short}
                               </span>
                             )}
 
@@ -1142,8 +1521,6 @@ export default function App() {
                       className={`selected-day-post-card ${isFair ? 'post-fair' : 'post-tea'}`}
                       onClick={() => openPostModal(post)}
                     >
-                      <div className="card-top-stripe" />
-                      
                       <div className="post-card-meta">
                         <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
                           {isFair ? <><PineIcon size={11} /> Гостинцев двор</> : <><TeaLeafIcon size={11} /> Чайная любовь</>}
@@ -1151,8 +1528,16 @@ export default function App() {
                         <span className="post-time-badge">
                           <Clock size={11} /> {post.time || '10:30'}
                         </span>
-                        <span className={`status-badge-inline status-${post.status || 'planned'}`}>
-                          {post.status === 'published' ? '✅ Опубликован' : (post.status === 'draft' ? '⏳ Черновик в ВК' : '📝 В плане')}
+                        <span 
+                          className={`status-badge-inline status-${post.status || 'planned'}`}
+                          style={{
+                            color: getStatusInfo(post.status).color,
+                            backgroundColor: getStatusInfo(post.status).bg,
+                            borderColor: getStatusInfo(post.status).border,
+                            border: `1px solid ${getStatusInfo(post.status).border}`
+                          }}
+                        >
+                          {getStatusInfo(post.status).badge}
                         </span>
 
                         {editMode && (
@@ -1219,6 +1604,7 @@ export default function App() {
             )}
           </section>
         </main>
+      </div>
       )}
 
       {/* ========================================================
@@ -1264,12 +1650,127 @@ export default function App() {
             >
               <span className="week-badge">5 нед</span> <span>26.10 – 31.10</span>
             </button>
+            <button 
+              className={`week-pill pill-ideas ${selectedWeek === 'ideas' ? 'active' : ''}`}
+              onClick={() => setSelectedWeek('ideas')}
+            >
+              <span className="week-badge">💡</span> <span>Банк идей ({ideaPosts.length})</span>
+            </button>
           </div>
 
-          {/* Список дней */}
+          {/* Режим Банка идей в мобильном списке */}
+          {selectedWeek === 'ideas' ? (
+            <div className="feed-ideas-container">
+              <div className="feed-ideas-header">
+                <div>
+                  <h3 className="feed-ideas-title">💡 Банк идей для публикаций</h3>
+                  <p className="feed-ideas-desc">Темы без назначенной даты. Выбирайте тему и нажимайте «В календарь», чтобы поставить её в свободный день.</p>
+                </div>
+                {editMode && (
+                  <button 
+                    className="btn btn-save" 
+                    onClick={() => openNewIdeaModal(filter === 'tea' ? 'tea' : 'fair')}
+                    style={{ padding: '6px 12px', fontSize: '12px' }}
+                  >
+                    <Plus size={13} /> + Новая идея
+                  </button>
+                )}
+              </div>
+
+              {filteredIdeas.length === 0 ? (
+                <div className="ideas-empty-state">
+                  <span>💡 В банке идей пока пусто.</span>
+                  {editMode && (
+                    <button className="btn btn-outline" style={{ marginTop: '8px' }} onClick={() => openNewIdeaModal('fair')}>
+                      + Создать первую идею
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="feed-cards-grid">
+                  {filteredIdeas.map(idea => {
+                    const isFair = idea.project === 'fair';
+                    const statusInfo = getStatusInfo(idea.status);
+
+                    return (
+                      <div 
+                        key={idea.id}
+                        className={`feed-post-card idea-feed-card ${isFair ? 'post-fair' : 'post-tea'}`}
+                        onClick={() => openPostModal(idea)}
+                      >
+                        <div className="feed-post-header">
+                          <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
+                            {isFair ? <><PineIcon size={11} /> Гостинцев двор</> : <><TeaLeafIcon size={11} /> Чайная любовь</>}
+                          </span>
+                          <span 
+                            className="feed-planned-badge"
+                            style={{
+                              color: statusInfo.color,
+                              backgroundColor: statusInfo.bg,
+                              borderColor: statusInfo.border,
+                              border: `1px solid ${statusInfo.border}`
+                            }}
+                          >
+                            {statusInfo.badge}
+                          </span>
+                        </div>
+
+                        <h3 className="feed-post-title">{idea.title}</h3>
+
+                        {idea.meaning && (
+                          <p className="feed-post-meaning">
+                            💡 {idea.meaning}
+                          </p>
+                        )}
+
+                        <div className="feed-post-actions">
+                          {editMode && (
+                            <button 
+                              type="button"
+                              className="post-reschedule-btn btn-assign-primary"
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (emptyOctoberDays.length > 0) {
+                                  movePostToDate(idea.id, emptyOctoberDays[0]);
+                                } else {
+                                  openRescheduleModal(idea); 
+                                }
+                              }}
+                              title={emptyOctoberDays.length > 0 ? `Занять слот: ${emptyOctoberDays[0]}` : "Выбрать дату"}
+                            >
+                              <CalendarIcon size={13} />
+                              <span>{emptyOctoberDays.length > 0 ? `В слот ${new Date(emptyOctoberDays[0]).getDate()} окт` : 'В календарь ➔'}</span>
+                            </button>
+                          )}
+
+                          {editMode && (
+                            <button 
+                              type="button"
+                              className="post-reschedule-btn"
+                              onClick={(e) => { e.stopPropagation(); openRescheduleModal(idea); }}
+                              title="Выбрать другую дату"
+                            >
+                              <ArrowRightLeft size={13} />
+                              <span>Выбрать день...</span>
+                            </button>
+                          )}
+
+                          <span className="feed-details-hint">
+                            Подробнее →
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+
+          /* Список дней */
           <div className="feed-days-list">
             {feedDates.map(dateStr => {
-              const dayPosts = posts.filter(p => {
+              const dayPosts = calendarPosts.filter(p => {
                 if (p.date !== dateStr) return false;
                 if (filter !== 'all' && p.project !== filter) return false;
                 if (searchQuery.trim()) {
@@ -1395,8 +1896,16 @@ export default function App() {
                                 <span className="btn-text-mobile">Черновик ВК ↗</span>
                               </a>
                             ) : (
-                              <span className="feed-planned-badge">
-                                📝 В плане публикации
+                              <span 
+                                className="feed-planned-badge"
+                                style={{
+                                  color: getStatusInfo(post.status).color,
+                                  backgroundColor: getStatusInfo(post.status).bg,
+                                  borderColor: getStatusInfo(post.status).border,
+                                  border: `1px solid ${getStatusInfo(post.status).border}`
+                                }}
+                              >
+                                {getStatusInfo(post.status).badge}
                               </span>
                             )}
 
@@ -1412,6 +1921,7 @@ export default function App() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
@@ -1470,11 +1980,28 @@ export default function App() {
           <div className="modal-card">
             <div className={`modal-header-banner ${modalForm.project === 'fair' ? 'banner-fair' : 'banner-tea'}`}>
               <div className="modal-header-info">
-                <span className="modal-category-badge">
-                  {modalForm.project === 'fair' ? '🎪 Гостинцев двор (Ярмарка мастеров)' : '🍵 Чайная любовь (Травяные сборы)'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                  <span className="modal-category-badge">
+                    {modalForm.project === 'fair' ? '🎪 Гостинцев двор (Ярмарка мастеров)' : '🍵 Чайная любовь (Травяные сборы)'}
+                  </span>
+                  <span 
+                    className="modal-status-chip"
+                    style={{
+                      color: getStatusInfo(modalForm.status).color,
+                      backgroundColor: getStatusInfo(modalForm.status).bg,
+                      borderColor: getStatusInfo(modalForm.status).border,
+                      border: `1px solid ${getStatusInfo(modalForm.status).border}`,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: 700
+                    }}
+                  >
+                    {getStatusInfo(modalForm.status).badge}
+                  </span>
+                </div>
                 <h3 className="modal-title-text">
-                  {isNewPost ? 'Новая публикация' : (editMode ? 'Редактирование публикации' : modalForm.title)}
+                  {isNewPost ? (modalForm.status === 'idea' ? 'Новая идея в банк' : 'Новая публикация') : (editMode ? 'Редактирование публикации' : modalForm.title)}
                 </h3>
               </div>
               <button className="modal-close-btn" onClick={() => setIsEditModalOpen(false)} title="Закрыть">
@@ -1487,16 +2014,43 @@ export default function App() {
                 <div className="form-field">
                   <label className="field-label">Дата публикации</label>
                   {editMode ? (
-                    <input 
-                      type="date" 
-                      className="craft-input" 
-                      value={modalForm.date} 
-                      onChange={(e) => setModalForm({ ...modalForm, date: e.target.value })}
-                      required
-                    />
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <input 
+                        type="date" 
+                        className="craft-input" 
+                        value={modalForm.date || ''} 
+                        onChange={(e) => setModalForm({ ...modalForm, date: e.target.value })}
+                        placeholder="Без даты для идеи"
+                      />
+                      {modalForm.date ? (
+                        <button 
+                          type="button" 
+                          className="btn btn-outline"
+                          style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
+                          onClick={() => setModalForm(prev => ({ ...prev, date: '', status: 'idea' }))}
+                          title="Снять дату и перевести в банк идей"
+                        >
+                          В идеи 💡
+                        </button>
+                      ) : (
+                        <button 
+                          type="button" 
+                          className="btn btn-outline"
+                          style={{ padding: '6px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}
+                          onClick={() => setModalForm(prev => ({ ...prev, date: emptyOctoberDays[0] || '2026-10-12', status: 'planned' }))}
+                          title="Назначить свободный слот"
+                        >
+                          + Слот 📅
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="readonly-value">
-                      📅 {new Date(modalForm.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {modalForm.date ? (
+                        `📅 ${new Date(modalForm.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                      ) : (
+                        '💡 Без даты (Банк идей)'
+                      )}
                     </div>
                   )}
                 </div>
@@ -1547,15 +2101,22 @@ export default function App() {
                   </div>
 
                   <div className="form-field">
-                    <label className="field-label">Статус</label>
+                    <label className="field-label">Статус публикации</label>
                     <select 
                       className="craft-select"
                       value={modalForm.status}
                       onChange={(e) => setModalForm({ ...modalForm, status: e.target.value })}
                     >
                       <option value="planned">📝 В плане</option>
+                      <option value="review">💬 На обсуждении</option>
+                      <option value="field_trip">🚗 Выезд / Локация</option>
+                      <option value="shooting">📸 Съёмка контента</option>
+                      <option value="in_progress">🎨 В работе (текст / визуал)</option>
+                      <option value="approved">✨ Утверждён к публикации</option>
                       <option value="draft">⏳ Черновик в ВК готов</option>
                       <option value="published">✅ Опубликован</option>
+                      <option value="idea">💡 Идея (в бэклог без даты)</option>
+                      <option value="paused">⏸️ Отложен / В архив</option>
                     </select>
                   </div>
                 </div>
@@ -1944,7 +2505,7 @@ export default function App() {
 
             <form onSubmit={confirmReschedule} className="modal-form-body">
               <div className="reschedule-current-badge">
-                <span>Текущая дата: <strong>{new Date(reschedulePost.date).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}</strong></span>
+                <span>Текущая дата: <strong>{reschedulePost.date ? new Date(reschedulePost.date).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '💡 Идея в бэклоге (дата не назначена)'}</strong></span>
               </div>
 
               <div className="form-field">
@@ -1962,52 +2523,72 @@ export default function App() {
               <div className="form-field">
                 <label className="field-label">Быстрый выбор:</label>
                 <div className="reschedule-quick-pills">
-                  <button 
-                    type="button" 
-                    className="quick-pill"
-                    onClick={() => {
-                      const d = new Date(reschedulePost.date);
-                      d.setDate(d.getDate() + 1);
-                      setRescheduleDate(d.toISOString().slice(0, 10));
-                    }}
-                  >
-                    +1 день
-                  </button>
-                  <button 
-                    type="button" 
-                    className="quick-pill"
-                    onClick={() => {
-                      const d = new Date(reschedulePost.date);
-                      d.setDate(d.getDate() + 2);
-                      setRescheduleDate(d.toISOString().slice(0, 10));
-                    }}
-                  >
-                    +2 дня
-                  </button>
-                  <button 
-                    type="button" 
-                    className="quick-pill"
-                    onClick={() => {
-                      const d = new Date(reschedulePost.date);
-                      d.setDate(d.getDate() + 3);
-                      setRescheduleDate(d.toISOString().slice(0, 10));
-                    }}
-                  >
-                    +3 дня
-                  </button>
-                  <button 
-                    type="button" 
-                    className="quick-pill"
-                    onClick={() => {
-                      const d = new Date(reschedulePost.date);
-                      d.setDate(d.getDate() + 7);
-                      setRescheduleDate(d.toISOString().slice(0, 10));
-                    }}
-                  >
-                    +7 дней
-                  </button>
+                  {reschedulePost.date && (
+                    <>
+                      <button 
+                        type="button" 
+                        className="quick-pill"
+                        onClick={() => {
+                          const d = new Date(reschedulePost.date);
+                          d.setDate(d.getDate() + 1);
+                          setRescheduleDate(d.toISOString().slice(0, 10));
+                        }}
+                      >
+                        +1 день
+                      </button>
+                      <button 
+                        type="button" 
+                        className="quick-pill"
+                        onClick={() => {
+                          const d = new Date(reschedulePost.date);
+                          d.setDate(d.getDate() + 2);
+                          setRescheduleDate(d.toISOString().slice(0, 10));
+                        }}
+                      >
+                        +2 дня
+                      </button>
+                      <button 
+                        type="button" 
+                        className="quick-pill"
+                        onClick={() => {
+                          const d = new Date(reschedulePost.date);
+                          d.setDate(d.getDate() + 7);
+                          setRescheduleDate(d.toISOString().slice(0, 10));
+                        }}
+                      >
+                        +7 дней
+                      </button>
+                    </>
+                  )}
+                  {emptyOctoberDays.slice(0, 4).map(d => (
+                    <button 
+                      key={d}
+                      type="button" 
+                      className="quick-pill"
+                      onClick={() => setRescheduleDate(d)}
+                      title={`Свободный день в октябре: ${d}`}
+                    >
+                      {new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} (пусто)
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {reschedulePost.date && (
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-cream)' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline"
+                    style={{ width: '100%', justifyContent: 'center' }}
+                    onClick={async () => {
+                      await movePostToIdeas(reschedulePost.id);
+                      setReschedulePost(null);
+                    }}
+                  >
+                    💡 Снять с даты (вернуть в банк идей)
+                  </button>
+                </div>
+              )}
 
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setReschedulePost(null)}>
