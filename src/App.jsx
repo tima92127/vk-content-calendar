@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import './App.css';
 import { 
@@ -12,16 +12,16 @@ import {
   Plus, 
   CheckCircle2, 
   Clock, 
-  Sparkles,
   GripVertical,
   X,
   Search,
   Eye,
-  Edit3,
-  Filter,
   Trash2,
   Layers,
-  ArrowRight
+  List,
+  LayoutGrid,
+  Smartphone,
+  Share2
 } from 'lucide-react';
 
 // Фирменные векторные иконки брендов
@@ -48,12 +48,16 @@ const TeaLeafIcon = ({ size = 13, className = "" }) => (
 export default function App() {
   const [posts, setPosts] = useState([]);
   const [milestones, setMilestones] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
+  const [showPwaTip, setShowPwaTip] = useState(true);
   
-  // Текущий месяц: Октябрь 2026 (месяц 9 в JS 0-indexed)
+  // Режим отображения: 'calendar' (сетка месяца) или 'feed' (лента по дням для мобильных)
+  const [viewMode, setViewMode] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 820 ? 'feed' : 'calendar'));
+  const [selectedWeek, setSelectedWeek] = useState('all');
+
+  // Текущий месяц (по умолчанию Октябрь 2026, 9 в JS 0-indexed)
   const [currentDate, setCurrentDate] = useState(new Date(2026, 9, 1));
   
   // Состояние авторизации
@@ -69,7 +73,7 @@ export default function App() {
   const [draggedPostId, setDraggedPostId] = useState(null);
   const [dragOverDate, setDragOverDate] = useState(null);
 
-  // Модальные окна (Редактирование / Просмотр / Создание)
+  // Модальные окна
   const [selectedPost, setSelectedPost] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewPost, setIsNewPost] = useState(false);
@@ -85,12 +89,16 @@ export default function App() {
     cta: ''
   });
 
+  // Защита модалок от случайного закрытия при выделении текста мышью
+  const authBackdropMouseDownRef = useRef(false);
+  const editBackdropMouseDownRef = useRef(false);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Загрузка постов из Supabase
+  // Загрузка постов
   const fetchPosts = async () => {
     try {
       const { data, error } = await supabase
@@ -104,7 +112,7 @@ export default function App() {
     }
   };
 
-  // Загрузка праздников и дат ярмарок
+  // Загрузка вех
   const fetchMilestones = async () => {
     try {
       const { data } = await supabase.from('milestones').select('*');
@@ -117,9 +125,8 @@ export default function App() {
   useEffect(() => {
     fetchPosts();
     fetchMilestones();
-    setLoading(false);
 
-    // Проверка текущей сессии пользователя
+    // Проверка текущей сессии
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -133,7 +140,7 @@ export default function App() {
       else setEditMode(false);
     });
 
-    // Supabase Realtime подписка на живые изменения в базе
+    // Realtime подписка
     const channel = supabase
       .channel('public:posts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
@@ -147,7 +154,7 @@ export default function App() {
     };
   }, []);
 
-  // АВТОРИЗАЦИЯ КОМАНДЫ
+  // АВТОРИЗАЦИЯ
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -162,7 +169,7 @@ export default function App() {
 
       setIsAuthModalOpen(false);
       setAuthPassword('');
-      showToast('🎉 Добро пожаловать! Режим редактирования активирован.');
+      showToast('🎉 Режим редактирования активирован');
     } catch (err) {
       setAuthError(err.message === 'Invalid login credentials' ? 'Неверный email или пароль' : err.message);
     } finally {
@@ -174,10 +181,10 @@ export default function App() {
     await supabase.auth.signOut();
     setUser(null);
     setEditMode(false);
-    showToast('👋 Вы вышли из режима редактирования. Включен режим просмотра.');
+    showToast('Вы перешли в режим просмотра');
   };
 
-  // DRAG AND DROP ОБРАБОТЧИКИ
+  // DRAG AND DROP
   const handleDragStart = (e, post) => {
     if (!editMode) return;
     e.dataTransfer.setData('text/plain', post.id);
@@ -206,11 +213,11 @@ export default function App() {
     const movingPost = posts.find(p => p.id === postId);
     if (movingPost && movingPost.date === targetDateStr) return;
 
-    // Оптимистичное локальное обновление
+    // Локальное обновление
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: targetDateStr } : p));
 
     const dateFormatted = new Date(targetDateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-    showToast(`📍 Пост перенесен на ${dateFormatted}`);
+    showToast(`📍 Публикация перенесена на ${dateFormatted}`);
 
     // Запись в Supabase
     const { error } = await supabase
@@ -219,13 +226,13 @@ export default function App() {
       .eq('id', postId);
 
     if (error) {
-      console.error('Ошибка переноса:', error);
+      console.error('Ошибка сохранения:', error);
       fetchPosts();
-      showToast('⚠️ Ошибка сохранения. Проверьте права доступа.');
+      showToast('⚠️ Ошибка сохранения');
     }
   };
 
-  // ОТКРЫТИЕ ПОСТА (ПРОСМОТР / РЕДАКТИРОВАНИЕ)
+  // ОТКРЫТИЕ ПОСТА
   const openPostModal = (post) => {
     setSelectedPost(post);
     setIsNewPost(false);
@@ -243,7 +250,7 @@ export default function App() {
     setIsEditModalOpen(true);
   };
 
-  // СОЗДАНИЕ НОВОГО ПОСТА
+  // СОЗДАНИЕ ПОСТА
   const openNewPostModal = (dayDateStr) => {
     if (!editMode) return;
     setSelectedPost(null);
@@ -262,7 +269,7 @@ export default function App() {
     setIsEditModalOpen(true);
   };
 
-  // СОХРАНЕНИЕ ИЗМЕНЕНИЙ В МОДАЛКЕ
+  // СОХРАНЕНИЕ
   const savePostChanges = async (e) => {
     e.preventDefault();
     if (!editMode) return;
@@ -281,50 +288,45 @@ export default function App() {
     };
 
     if (isNewPost) {
-      // Вставка нового поста
-      const { data, error } = await supabase.from('posts').insert([payload]).select();
+      const { error } = await supabase.from('posts').insert([payload]);
       if (error) {
-        console.error('Ошибка добавления поста:', error);
-        showToast('⚠️ Не удалось создать пост: ' + error.message);
+        showToast('⚠️ Ошибка создания: ' + error.message);
       } else {
-        showToast('✨ Новая публикация добавлена!');
+        showToast('✨ Новая публикация добавлена');
         fetchPosts();
       }
     } else if (selectedPost) {
-      // Обновление существующего поста
       setPosts(prev => prev.map(p => p.id === selectedPost.id ? { ...p, ...payload } : p));
       const { error } = await supabase.from('posts').update(payload).eq('id', selectedPost.id);
       if (error) {
-        console.error('Ошибка сохранения поста:', error);
         fetchPosts();
         showToast('⚠️ Ошибка сохранения: ' + error.message);
       } else {
-        showToast('💾 Изменения успешно сохранены!');
+        showToast('💾 Изменения сохранены');
       }
     }
 
     setIsEditModalOpen(false);
   };
 
-  // УДАЛЕНИЕ ПОСТА
+  // УДАЛЕНИЕ
   const deletePost = async () => {
     if (!editMode || !selectedPost) return;
-    if (!window.confirm(`Вы точно хотите удалить публикацию «${selectedPost.title}»?`)) return;
+    if (!window.confirm(`Удалить публикацию «${selectedPost.title}»?`)) return;
 
     setPosts(prev => prev.filter(p => p.id !== selectedPost.id));
     setIsEditModalOpen(false);
 
     const { error } = await supabase.from('posts').delete().eq('id', selectedPost.id);
     if (error) {
-      console.error('Ошибка удаления:', error);
       fetchPosts();
-      showToast('⚠️ Ошибка при удалении');
+      showToast('⚠️ Ошибка удаления');
     } else {
       showToast('🗑️ Публикация удалена');
     }
   };
 
-  // НАВИГАЦИЯ ПО МЕСЯЦАМ
+  // НАВИГАЦИЯ
   const prevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
@@ -335,7 +337,7 @@ export default function App() {
     setCurrentDate(new Date(2026, 9, 1));
   };
 
-  // ГЕНЕРАЦИЯ СЕТКИ КАЛЕНДАРЯ
+  // ГЕНЕРАЦИЯ ДНЕЙ МЕСЯЦА
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -378,9 +380,35 @@ export default function App() {
     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
   ];
 
-  // Фильтрация по поиску и проекту
+  // Фильтрация
   const fairCount = posts.filter(p => p.project === 'fair').length;
   const teaCount = posts.filter(p => p.project === 'tea').length;
+
+  const filteredPostsList = posts.filter(p => {
+    if (filter !== 'all' && p.project !== filter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = p.title?.toLowerCase().includes(q);
+      const matchMeaning = p.meaning?.toLowerCase().includes(q);
+      return matchTitle || matchMeaning;
+    }
+    return true;
+  });
+
+  // Проверка постов на текущий отображаемый месяц
+  const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const postsInCurrentMonth = posts.filter(p => p.date.startsWith(currentMonthPrefix));
+
+  // Группировка для мобильного вида (Feed / Agenda)
+  const uniqueDates = [...new Set(posts.map(p => p.date))].sort();
+  const feedDates = uniqueDates.filter(d => {
+    if (selectedWeek === 'w1') return d >= '2026-09-28' && d <= '2026-10-04';
+    if (selectedWeek === 'w2') return d >= '2026-10-05' && d <= '2026-10-11';
+    if (selectedWeek === 'w3') return d >= '2026-10-12' && d <= '2026-10-18';
+    if (selectedWeek === 'w4') return d >= '2026-10-19' && d <= '2026-10-25';
+    if (selectedWeek === 'w5') return d >= '2026-10-26' && d <= '2026-10-31';
+    return true;
+  });
 
   return (
     <div className="app-container">
@@ -392,10 +420,9 @@ export default function App() {
         </div>
       )}
 
-      {/* ВЕРХНЯЯ БРЕНДОВАЯ ПАНЕЛЬ (HEADER) */}
+      {/* ШАПКА */}
       <header className="brand-header">
         <div className="header-left">
-          {/* Фирменный крафтовый медальон-штамп */}
           <div className="brand-seal" title="Гостинцев двор & Чайная любовь">
             <div className="seal-inner">
               <PineIcon size={16} className="seal-pine" />
@@ -413,28 +440,28 @@ export default function App() {
               «Гостинцев двор» <span className="ampersand">&</span> «Чайная любовь»
             </h1>
             <div className="brand-meta">
-              План публикаций и интерактивный дашборд для команды и заказчика
+              План публикаций и интерактивный дашборд
             </div>
           </div>
         </div>
 
         <div className="header-actions">
-          {/* Индикатор статуса доступа */}
+          {/* Индикатор статуса доступа (без упоминания конкретных имён) */}
           <div className={`access-pill ${user ? 'mode-team' : 'mode-guest'}`}>
             {user ? (
               <>
                 <Unlock size={13} className="access-icon pulse-icon" />
-                <span>Редактор: <strong>{user.email === 'tima92127@gmail.com' ? 'Тимур' : 'Наталья'}</strong></span>
+                <span>Режим: <strong>Редактирование</strong></span>
               </>
             ) : (
               <>
                 <Eye size={13} className="access-icon" />
-                <span>Режим просмотра (Мила / Гости)</span>
+                <span>Режим: <strong>Просмотр</strong></span>
               </>
             )}
           </div>
 
-          {/* Кнопка входа/выхода */}
+          {/* Управление для команды */}
           {user ? (
             <div className="team-controls">
               <div 
@@ -448,43 +475,63 @@ export default function App() {
                 </div>
               </div>
 
-              <button className="btn btn-outline" onClick={handleLogout} title="Выйти из аккаунта">
+              <button className="btn btn-outline" onClick={handleLogout} title="Выйти из режима редактора">
                 Выйти
               </button>
             </div>
           ) : (
             <button className="btn btn-login" onClick={() => setIsAuthModalOpen(true)}>
-              <Lock size={13} /> Вход для команды
+              <Lock size={13} /> Вход для редакторов
             </button>
           )}
 
-          {/* Экспорт в PDF / Печать */}
+          {/* Печать / PDF */}
           <button className="btn btn-print" onClick={() => window.print()} title="Распечатать или сохранить чистый PDF">
             <Printer size={14} /> Печать / PDF
           </button>
         </div>
       </header>
 
-      {/* ПАНЕЛЬ НАВИГАЦИИ, ФИЛЬТРОВ И ПОИСКА */}
+      {/* ПАНЕЛЬ ПЕРЕКЛЮЧЕНИЯ ВИДА И ФИЛЬТРОВ */}
       <section className="control-bar">
-        {/* Селектор месяцев */}
-        <div className="calendar-nav">
-          <button className="nav-btn" onClick={prevMonth} title="Предыдущий месяц">
-            <ChevronLeft size={16} />
+        {/* Переключатель вида (Календарь / Лента по дням для мобильных) */}
+        <div className="view-mode-tabs">
+          <button 
+            className={`view-tab ${viewMode === 'calendar' ? 'active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+            title="Сетка месяца"
+          >
+            <LayoutGrid size={14} /> Сетка месяца
           </button>
-          <div className="current-month-display">
-            <span className="month-name">{monthNames[month]}</span>
-            <span className="year-name">{year}</span>
-          </div>
-          <button className="nav-btn" onClick={nextMonth} title="Следующий месяц">
-            <ChevronRight size={16} />
+          <button 
+            className={`view-tab ${viewMode === 'feed' ? 'active' : ''}`}
+            onClick={() => setViewMode('feed')}
+            title="Лента по дням (Удобно для смартфонов)"
+          >
+            <List size={14} /> Список по дням
           </button>
-          {month !== 9 && (
-            <button className="btn-quick-today" onClick={goToOctober} title="Вернуться к плану Октября">
-              Октябрь 2026
-            </button>
-          )}
         </div>
+
+        {/* Селектор месяцев (в режиме календаря) */}
+        {viewMode === 'calendar' && (
+          <div className="calendar-nav">
+            <button className="nav-btn" onClick={prevMonth} title="Предыдущий месяц">
+              <ChevronLeft size={16} />
+            </button>
+            <div className="current-month-display">
+              <span className="month-name">{monthNames[month]}</span>
+              <span className="year-name">{year}</span>
+            </div>
+            <button className="nav-btn" onClick={nextMonth} title="Следующий месяц">
+              <ChevronRight size={16} />
+            </button>
+            {month !== 9 && (
+              <button className="btn-quick-today" onClick={goToOctober} title="Вернуться к плану Октября">
+                Октябрь 2026
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Проектные фильтры-чипы */}
         <div className="project-chips">
@@ -492,95 +539,128 @@ export default function App() {
             className={`chip chip-all ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
           >
-            <Layers size={13} /> Все публикации <span className="chip-count">{posts.length}</span>
+            <Layers size={13} /> Все <span className="chip-count">{posts.length}</span>
           </button>
           <button 
             className={`chip chip-fair ${filter === 'fair' ? 'active' : ''}`}
             onClick={() => setFilter('fair')}
           >
-            <PineIcon size={13} /> Гостинцев двор <span className="chip-count">{fairCount}</span>
+            <PineIcon size={13} /> Ярмарка <span className="chip-count">{fairCount}</span>
           </button>
           <button 
             className={`chip chip-tea ${filter === 'tea' ? 'active' : ''}`}
             onClick={() => setFilter('tea')}
           >
-            <TeaLeafIcon size={13} /> Чайная любовь <span className="chip-count">{teaCount}</span>
+            <TeaLeafIcon size={13} /> Чайная <span className="chip-count">{teaCount}</span>
           </button>
         </div>
 
-        {/* Живой поиск по темам */}
+        {/* Живой поиск */}
         <div className="search-box">
           <Search size={14} className="search-icon" />
           <input 
             type="text" 
-            placeholder="Поиск по темам, тексту..." 
+            placeholder="Поиск по темам..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
           {searchQuery && (
-            <button className="search-clear" onClick={() => setSearchQuery('')}>
+            <button className="search-clear" onClick={() => setSearchQuery('')} title="Очистить поиск">
               <X size={12} />
             </button>
           )}
         </div>
       </section>
 
-      {/* ДОСКА КАЛЕНДАРЯ */}
-      <main className="calendar-container">
-        {/* Заголовки дней недели */}
-        <div className="weekdays-grid">
-          <div className="weekday-cell">Понедельник</div>
-          <div className="weekday-cell">Вторник</div>
-          <div className="weekday-cell">Среда</div>
-          <div className="weekday-cell">Четверг</div>
-          <div className="weekday-cell">Пятница</div>
-          <div className="weekday-cell weekend-cell">Суббота</div>
-          <div className="weekday-cell weekend-cell">Воскресенье</div>
+      {/* ПЛАШКА АКТИВНОГО ПОИСКА */}
+      {searchQuery.trim() && (
+        <div className="search-active-banner">
+          <span>Результаты поиска «<strong>{searchQuery}</strong>»: найдено публикаций: <strong>{filteredPostsList.length}</strong></span>
+          <button className="btn-reset-search" onClick={() => setSearchQuery('')}>Сбросить поиск</button>
         </div>
+      )}
 
-        {/* Сетка ячеек дней */}
-        <div className="calendar-days-grid">
-          {calendarDays.map((slot, idx) => {
-            const isToday = slot.dateStr === '2026-09-28';
-            const isWeekend = slot.dayOfWeek === 5 || slot.dayOfWeek === 6;
-            const isHovered = dragOverDate === slot.dateStr;
+      {/* ========================================================
+          РЕЖИМ 1: СЕТКА МЕСЯЦА (DESKTOP & ПЛАНШЕТЫ)
+          ======================================================== */}
+      {viewMode === 'calendar' && (
+        <main className="calendar-container">
+          {/* Предупреждение, если выбран пустой месяц */}
+          {postsInCurrentMonth.length === 0 && (
+            <div className="empty-month-banner">
+              <span>📅 В месяце {monthNames[month]} {year} нет публикаций. Основной утверждённый план составлен на Октябрь 2026 года.</span>
+              <button className="btn btn-login" onClick={goToOctober} style={{ marginLeft: '12px', padding: '5px 12px' }}>
+                Перейти к Октябрю 2026
+              </button>
+            </div>
+          )}
 
-            // Посты дня с учетом фильтров
-            const dayPosts = posts.filter(p => {
-              if (p.date !== slot.dateStr) return false;
-              if (filter !== 'all' && p.project !== filter) return false;
-              if (searchQuery.trim()) {
-                const q = searchQuery.toLowerCase();
-                const matchTitle = p.title?.toLowerCase().includes(q);
-                const matchMeaning = p.meaning?.toLowerCase().includes(q);
-                return matchTitle || matchMeaning;
-              }
-              return true;
-            });
+          {/* Заголовки дней недели */}
+          <div className="weekdays-grid">
+            <div className="weekday-cell">Понедельник</div>
+            <div className="weekday-cell">Вторник</div>
+            <div className="weekday-cell">Среда</div>
+            <div className="weekday-cell">Четверг</div>
+            <div className="weekday-cell">Пятница</div>
+            <div className="weekday-cell weekend-cell">Суббота</div>
+            <div className="weekday-cell weekend-cell">Воскресенье</div>
+          </div>
 
-            // Праздничные даты / Ярмарочные вехи
-            const dayMilestones = milestones.filter(m => {
-              return slot.dateStr >= m.date_start && slot.dateStr <= m.date_end;
-            });
+          {/* Сетка ячеек дней */}
+          <div className="calendar-days-grid">
+            {calendarDays.map((slot, idx) => {
+              const isToday = slot.dateStr === '2026-09-28';
+              const isWeekend = slot.dayOfWeek === 5 || slot.dayOfWeek === 6;
+              const isHovered = dragOverDate === slot.dateStr;
 
-            return (
-              <div 
-                key={idx}
-                className={`day-card ${!slot.isCurrentMonth ? 'outside-month' : ''} ${isWeekend ? 'weekend-day' : ''} ${isToday ? 'is-today' : ''} ${isHovered ? 'drag-target-hover' : ''}`}
-                onDragOver={(e) => handleDragOver(e, slot.dateStr)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, slot.dateStr)}
-              >
-                {/* Шапочка дня: дата и бейджи событий */}
-                <div className="day-header">
-                  <div className="day-number-badge">
-                    <span className="day-num">{slot.date}</span>
-                    {isToday && <span className="today-craft-label">Сегодня</span>}
+              // Посты дня с учетом фильтров
+              const dayPosts = posts.filter(p => {
+                if (p.date !== slot.dateStr) return false;
+                if (filter !== 'all' && p.project !== filter) return false;
+                if (searchQuery.trim()) {
+                  const q = searchQuery.toLowerCase();
+                  const matchTitle = p.title?.toLowerCase().includes(q);
+                  const matchMeaning = p.meaning?.toLowerCase().includes(q);
+                  return matchTitle || matchMeaning;
+                }
+                return true;
+              });
+
+              // Праздники и даты ярмарок
+              const dayMilestones = milestones.filter(m => {
+                return slot.dateStr >= m.date_start && slot.dateStr <= m.date_end;
+              });
+
+              return (
+                <div 
+                  key={idx}
+                  className={`day-card ${!slot.isCurrentMonth ? 'outside-month' : ''} ${isWeekend ? 'weekend-day' : ''} ${isToday ? 'is-today' : ''} ${isHovered ? 'drag-target-hover' : ''}`}
+                  onDragOver={(e) => handleDragOver(e, slot.dateStr)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, slot.dateStr)}
+                >
+                  {/* Шапочка дня: дата и плюс */}
+                  <div className="day-header">
+                    <div className="day-number-badge">
+                      <span className="day-num">{slot.date}</span>
+                      {isToday && <span className="today-craft-label">Сегодня</span>}
+                    </div>
+
+                    {editMode && slot.isCurrentMonth && (
+                      <button 
+                        className="add-post-quick-btn" 
+                        onClick={() => openNewPostModal(slot.dateStr)}
+                        title="Добавить публикацию на этот день"
+                      >
+                        <Plus size={11} />
+                      </button>
+                    )}
                   </div>
 
+                  {/* Полоска праздника/вехи отдельной строкой (не сжимает дату) */}
                   {dayMilestones.length > 0 && (
-                    <div className="milestone-ribbon" title={dayMilestones[0].summary}>
+                    <div className="day-milestone-bar" title={dayMilestones[0].summary}>
                       {dayMilestones[0].category === 'fair' ? (
                         <span className="ribbon-fair">🎪 {dayMilestones[0].summary}</span>
                       ) : (
@@ -589,96 +669,267 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Кнопка быстрого добавления поста в этот день (только для команды) */}
-                  {editMode && slot.isCurrentMonth && (
-                    <button 
-                      className="add-post-quick-btn" 
-                      onClick={() => openNewPostModal(slot.dateStr)}
-                      title="Добавить публикацию на этот день"
-                    >
-                      <Plus size={11} />
-                    </button>
-                  )}
-                </div>
+                  {/* Список карточек постов */}
+                  <div className="posts-stack">
+                    {dayPosts.map(post => {
+                      const isFair = post.project === 'fair';
+                      const isDragging = draggedPostId === post.id;
+                      const hasVkLink = Boolean(post.vk_draft_url && post.vk_draft_url.trim());
 
-                {/* Список постов в ячейке дня */}
-                <div className="posts-stack">
-                  {dayPosts.map(post => {
-                    const isFair = post.project === 'fair';
-                    const isDragging = draggedPostId === post.id;
-                    const hasVkLink = Boolean(post.vk_draft_url && post.vk_draft_url.trim());
+                      return (
+                        <article 
+                          key={post.id}
+                          className={`post-card ${isFair ? 'post-fair' : 'post-tea'} ${isDragging ? 'is-dragged' : ''} ${editMode ? 'can-drag' : ''}`}
+                          draggable={editMode}
+                          onDragStart={(e) => handleDragStart(e, post)}
+                          onClick={() => openPostModal(post)}
+                        >
+                          <div className="card-top-stripe" />
 
-                    return (
-                      <article 
-                        key={post.id}
-                        className={`post-card ${isFair ? 'post-fair' : 'post-tea'} ${isDragging ? 'is-dragged' : ''} ${editMode ? 'can-drag' : ''}`}
-                        draggable={editMode}
-                        onDragStart={(e) => handleDragStart(e, post)}
-                        onClick={() => openPostModal(post)}
-                      >
-                        {/* Верхняя цветная крафтовая полоска-закладка */}
-                        <div className="card-top-stripe" />
+                          <div className="card-meta">
+                            <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
+                              {isFair ? (
+                                <><PineIcon size={10} /> Ярмарка</>
+                              ) : (
+                                <><TeaLeafIcon size={10} /> Чайная</>
+                              )}
+                            </span>
 
-                        {/* Метаданные карточки: бренд и время */}
-                        <div className="card-meta">
-                          <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
-                            {isFair ? (
-                              <><PineIcon size={10} /> Ярмарка</>
+                            <span className="card-time">
+                              <Clock size={10} /> {post.time || '10:30'}
+                            </span>
+                          </div>
+
+                          <h4 className="card-title" title={post.title}>
+                            {post.title}
+                          </h4>
+
+                          <div className="card-footer">
+                            {hasVkLink ? (
+                              <a 
+                                href={post.vk_draft_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="vk-pill-btn"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Открыть отложенную запись во ВКонтакте"
+                              >
+                                <VkIcon size={11} />
+                                <span>Черновик ВК ↗</span>
+                              </a>
                             ) : (
-                              <><TeaLeafIcon size={10} /> Чайная</>
+                              <span className="status-label">
+                                {post.status === 'published' ? '✅ Вышел' : '📝 В плане'}
+                              </span>
                             )}
-                          </span>
 
-                          <span className="card-time">
-                            <Clock size={10} /> {post.time || '10:30'}
-                          </span>
-                        </div>
-
-                        {/* Название / Тема публикации */}
-                        <h4 className="card-title" title={post.title}>
-                          {post.title}
-                        </h4>
-
-                        {/* Нижняя полоска с кнопкой прямого перехода в ВК черновик */}
-                        <div className="card-footer">
-                          {hasVkLink ? (
-                            <a 
-                              href={post.vk_draft_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="vk-pill-btn"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Открыть готовый черновик прямо во ВКонтакте"
-                            >
-                              <VkIcon size={11} />
-                              <span>Черновик ВК ↗</span>
-                            </a>
-                          ) : (
-                            <span className="status-label">
-                              {post.status === 'published' ? '✅ Вышел' : '📝 В плане'}
-                            </span>
-                          )}
-
-                          {editMode && (
-                            <span className="drag-handle" title="Зажмите и перетащите на другую дату">
-                              <GripVertical size={13} />
-                            </span>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
+                            {editMode && (
+                              <span className="drag-handle" title="Перетащить на другой день">
+                                <GripVertical size={13} />
+                              </span>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </main>
+              );
+            })}
+          </div>
+        </main>
+      )}
 
-      {/* МОДАЛЬНОЕ ОКНО: ДЕТАЛИ И РЕДАКТИРОВАНИЕ ПОСТА */}
+      {/* ========================================================
+          РЕЖИМ 2: СПИСОК ПО ДНЯМ (УДОБНО ДЛЯ СМАРТФОНОВ & МИНИ-ВЕБ-ПРИЛОЖЕНИЯ)
+          ======================================================== */}
+      {viewMode === 'feed' && (
+        <div className="feed-container">
+          {/* Быстрые фильтры по неделям */}
+          <div className="week-filter-strip">
+            <button 
+              className={`week-pill ${selectedWeek === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedWeek('all')}
+            >
+              Все дни
+            </button>
+            <button 
+              className={`week-pill ${selectedWeek === 'w1' ? 'active' : ''}`}
+              onClick={() => setSelectedWeek('w1')}
+            >
+              Неделя 1 (28.09 – 04.10)
+            </button>
+            <button 
+              className={`week-pill ${selectedWeek === 'w2' ? 'active' : ''}`}
+              onClick={() => setSelectedWeek('w2')}
+            >
+              Неделя 2 (05.10 – 11.10)
+            </button>
+            <button 
+              className={`week-pill ${selectedWeek === 'w3' ? 'active' : ''}`}
+              onClick={() => setSelectedWeek('w3')}
+            >
+              Неделя 3 (12.10 – 18.10)
+            </button>
+            <button 
+              className={`week-pill ${selectedWeek === 'w4' ? 'active' : ''}`}
+              onClick={() => setSelectedWeek('w4')}
+            >
+              Неделя 4 (19.10 – 25.10)
+            </button>
+            <button 
+              className={`week-pill ${selectedWeek === 'w5' ? 'active' : ''}`}
+              onClick={() => setSelectedWeek('w5')}
+            >
+              Неделя 5 (26.10 – 31.10)
+            </button>
+          </div>
+
+          {/* Список дней */}
+          <div className="feed-days-list">
+            {feedDates.map(dateStr => {
+              const dayPosts = posts.filter(p => {
+                if (p.date !== dateStr) return false;
+                if (filter !== 'all' && p.project !== filter) return false;
+                if (searchQuery.trim()) {
+                  const q = searchQuery.toLowerCase();
+                  return p.title?.toLowerCase().includes(q) || p.meaning?.toLowerCase().includes(q);
+                }
+                return true;
+              });
+
+              if (dayPosts.length === 0) return null;
+
+              const dateObj = new Date(dateStr);
+              const dayName = dateObj.toLocaleDateString('ru-RU', { weekday: 'long' });
+              const dateFormatted = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+              const isToday = dateStr === '2026-09-28';
+
+              const dayMilestones = milestones.filter(m => dateStr >= m.date_start && dateStr <= m.date_end);
+
+              return (
+                <div key={dateStr} className={`feed-day-group ${isToday ? 'is-today-feed' : ''}`}>
+                  <div className="feed-day-header">
+                    <div className="feed-day-title">
+                      <span className="feed-day-name">{dayName}</span>
+                      <span className="feed-day-date">{dateFormatted}</span>
+                      {isToday && <span className="feed-today-tag">Сегодня</span>}
+                    </div>
+
+                    {dayMilestones.length > 0 && (
+                      <span className="feed-milestone-tag">
+                        {dayMilestones[0].category === 'fair' ? '🎪 ' : '🍎 '}
+                        {dayMilestones[0].summary}
+                      </span>
+                    )}
+
+                    {editMode && (
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ padding: '4px 8px', fontSize: '11px', marginLeft: 'auto' }}
+                        onClick={() => openNewPostModal(dateStr)}
+                      >
+                        <Plus size={12} /> Добавить пост
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="feed-cards-grid">
+                    {dayPosts.map(post => {
+                      const isFair = post.project === 'fair';
+                      const hasVkLink = Boolean(post.vk_draft_url && post.vk_draft_url.trim());
+
+                      return (
+                        <div 
+                          key={post.id}
+                          className={`feed-post-card ${isFair ? 'post-fair' : 'post-tea'}`}
+                          onClick={() => openPostModal(post)}
+                        >
+                          <div className="card-top-stripe" />
+                          
+                          <div className="feed-post-header">
+                            <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
+                              {isFair ? <><PineIcon size={11} /> Гостинцев двор</> : <><TeaLeafIcon size={11} /> Чайная любовь</>}
+                            </span>
+                            <span className="feed-post-time">
+                              <Clock size={12} /> {post.time || '10:30'}
+                            </span>
+                          </div>
+
+                          <h3 className="feed-post-title">{post.title}</h3>
+
+                          {post.meaning && (
+                            <p className="feed-post-meaning">
+                              💡 {post.meaning}
+                            </p>
+                          )}
+
+                          <div className="feed-post-actions">
+                            {hasVkLink ? (
+                              <a 
+                                href={post.vk_draft_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="feed-vk-btn"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <VkIcon size={14} />
+                                <span>Открыть черновик во ВКонтакте ↗</span>
+                              </a>
+                            ) : (
+                              <span className="feed-planned-badge">
+                                📝 В плане публикации
+                              </span>
+                            )}
+
+                            <span className="feed-details-hint">
+                              Подробнее ➔
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* МОБИЛЬНАЯ ПОДСКАЗКА ДЛЯ УСТАНОВКИ ВЕБ-ПРИЛОЖЕНИЯ (PWA) */}
+      {showPwaTip && (
+        <div className="pwa-install-banner">
+          <div className="pwa-tip-content">
+            <Smartphone size={16} className="pwa-phone-icon" />
+            <span>
+              <strong>Удобный доступ с телефона:</strong> добавьте страницу на экран «Домой» (в браузере нажмите «Поделиться» <Share2 size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> ➔ «На экран Домой»), чтобы открывать календарь как приложение!
+            </span>
+          </div>
+          <button className="pwa-tip-close" onClick={() => setShowPwaTip(false)} title="Скрыть подсказку">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* ========================================================
+          МОДАЛЬНОЕ ОКНО: ДЕТАЛИ И РЕДАКТИРОВАНИЕ ПОСТА
+          ======================================================== */}
       {isEditModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsEditModalOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="modal-backdrop" 
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) editBackdropMouseDownRef.current = true;
+            else editBackdropMouseDownRef.current = false;
+          }}
+          onMouseUp={(e) => {
+            if (editBackdropMouseDownRef.current && e.target === e.currentTarget) {
+              setIsEditModalOpen(false);
+            }
+            editBackdropMouseDownRef.current = false;
+          }}
+        >
+          <div className="modal-card">
             <div className={`modal-header-banner ${modalForm.project === 'fair' ? 'banner-fair' : 'banner-tea'}`}>
               <div className="modal-header-info">
                 <span className="modal-category-badge">
@@ -688,13 +939,12 @@ export default function App() {
                   {isNewPost ? 'Новая публикация' : (editMode ? 'Редактирование публикации' : modalForm.title)}
                 </h3>
               </div>
-              <button className="modal-close-btn" onClick={() => setIsEditModalOpen(false)}>
+              <button className="modal-close-btn" onClick={() => setIsEditModalOpen(false)} title="Закрыть">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={savePostChanges} className="modal-form-body">
-              {/* Дата и время выхода */}
               <div className="form-row-2">
                 <div className="form-field">
                   <label className="field-label">Дата публикации</label>
@@ -730,7 +980,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Тема поста (в режиме редактирования) */}
               {editMode && (
                 <div className="form-field">
                   <label className="field-label">Тема / Заголовок</label>
@@ -739,13 +988,12 @@ export default function App() {
                     className="craft-input font-bold" 
                     value={modalForm.title} 
                     onChange={(e) => setModalForm({ ...modalForm, title: e.target.value })}
-                    placeholder="Например: Анонс открытия ярмарки..."
+                    placeholder="Тема публикации"
                     required
                   />
                 </div>
               )}
 
-              {/* Проект и статус */}
               {editMode && (
                 <div className="form-row-2">
                   <div className="form-field">
@@ -761,13 +1009,13 @@ export default function App() {
                   </div>
 
                   <div className="form-field">
-                    <label className="field-label">Статус публикации</label>
+                    <label className="field-label">Статус</label>
                     <select 
                       className="craft-select"
                       value={modalForm.status}
                       onChange={(e) => setModalForm({ ...modalForm, status: e.target.value })}
                     >
-                      <option value="planned">📝 Запланирован</option>
+                      <option value="planned">📝 В плане</option>
                       <option value="draft">⏳ Черновик в ВК готов</option>
                       <option value="published">✅ Опубликован</option>
                     </select>
@@ -775,15 +1023,15 @@ export default function App() {
                 </div>
               )}
 
-              {/* Блок прямой ссылки на черновик ВК */}
+              {/* Черновик во ВКонтакте */}
               <div className="form-field highlight-field">
                 <label className="field-label label-vk">
-                  <VkIcon size={14} /> Прямая ссылка на черновик или отложенную запись во ВКонтакте
+                  <VkIcon size={14} /> Ссылка на черновик / отложенный пост во ВКонтакте
                 </label>
                 {editMode ? (
                   <input 
                     type="url" 
-                    placeholder="https://vk.com/wall-XXXXX_YYYY или ссылка на отложенную запись" 
+                    placeholder="https://vk.com/..." 
                     className="craft-input" 
                     value={modalForm.vk_draft_url} 
                     onChange={(e) => setModalForm({ ...modalForm, vk_draft_url: e.target.value })}
@@ -801,22 +1049,21 @@ export default function App() {
                     </a>
                   ) : (
                     <div className="no-link-msg">
-                      Черновик во ВКонтакте формируется. Ссылка появится здесь, как только пост будет загружен в отложку.
+                      Черновик во ВКонтакте формируется и появится здесь после загрузки в отложку.
                     </div>
                   )
                 )}
               </div>
 
-              {/* Смысл и главная идея */}
+              {/* Смысл и ключевая мысль */}
               <div className="form-field">
-                <label className="field-label">💡 Смысл и ключевая мысль публикации</label>
+                <label className="field-label">💡 Смысл публикации</label>
                 {editMode ? (
                   <textarea 
                     className="craft-textarea" 
                     rows={2} 
                     value={modalForm.meaning}
                     onChange={(e) => setModalForm({ ...modalForm, meaning: e.target.value })}
-                    placeholder="Какую ценность несет пост подписчикам..."
                   />
                 ) : (
                   <div className="readonly-box">{modalForm.meaning || 'Информация дополняется...'}</div>
@@ -832,14 +1079,13 @@ export default function App() {
                     rows={2} 
                     value={modalForm.visual}
                     onChange={(e) => setModalForm({ ...modalForm, visual: e.target.value })}
-                    placeholder="Какое фото или макет из фотобанка используется..."
                   />
                 ) : (
                   <div className="readonly-box">{modalForm.visual || 'Информация дополняется...'}</div>
                 )}
               </div>
 
-              {/* Призыв к действию (CTA) */}
+              {/* Призыв к действию */}
               <div className="form-field">
                 <label className="field-label">🎯 Призыв к действию (CTA)</label>
                 {editMode ? (
@@ -848,14 +1094,12 @@ export default function App() {
                     className="craft-input" 
                     value={modalForm.cta}
                     onChange={(e) => setModalForm({ ...modalForm, cta: e.target.value })}
-                    placeholder="Например: Напишите в комментариях свой любимый сбор..."
                   />
                 ) : (
                   <div className="readonly-box">{modalForm.cta || '—'}</div>
                 )}
               </div>
 
-              {/* Кнопки действий модалки */}
               <div className="modal-footer">
                 {editMode && !isNewPost && (
                   <button type="button" className="btn-delete" onClick={deletePost}>
@@ -880,17 +1124,31 @@ export default function App() {
         </div>
       )}
 
-      {/* МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ КОМАНДЫ */}
+      {/* ========================================================
+          МОДАЛЬНОЕ ОКНО: ВХОД ДЛЯ РЕДАКТОРОВ
+          ======================================================== */}
       {isAuthModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsAuthModalOpen(false)}>
-          <div className="modal-card auth-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="modal-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) authBackdropMouseDownRef.current = true;
+            else authBackdropMouseDownRef.current = false;
+          }}
+          onMouseUp={(e) => {
+            if (authBackdropMouseDownRef.current && e.target === e.currentTarget) {
+              setIsAuthModalOpen(false);
+            }
+            authBackdropMouseDownRef.current = false;
+          }}
+        >
+          <div className="modal-card auth-modal-card">
             <div className="auth-header">
               <div className="auth-icon-wrap">
                 <Lock size={22} color="#233e2f" />
               </div>
-              <h3>Вход для команды</h3>
-              <p>Редактирование дат, времени и ссылок на черновики ВК (Тимур и Наталья)</p>
-              <button className="modal-close-btn" onClick={() => setIsAuthModalOpen(false)}>
+              <h3>Вход в систему</h3>
+              <p>Управление публикациями и расписанием</p>
+              <button className="modal-close-btn" onClick={() => setIsAuthModalOpen(false)} title="Закрыть">
                 <X size={18} />
               </button>
             </div>
@@ -903,13 +1161,14 @@ export default function App() {
               )}
 
               <div className="form-field">
-                <label className="field-label">Email команды</label>
+                <label className="field-label">Email</label>
                 <input 
                   type="email" 
-                  placeholder="tima92127@gmail.com или nakoresh@gmail.com" 
+                  placeholder="name@example.com" 
                   className="craft-input" 
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -922,6 +1181,7 @@ export default function App() {
                   className="craft-input" 
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
+                  autoComplete="current-password"
                   required
                 />
               </div>
@@ -931,12 +1191,8 @@ export default function App() {
                 className="btn btn-save auth-submit-btn"
                 disabled={authLoading}
               >
-                {authLoading ? 'Авторизация...' : 'Войти в панель управления'}
+                {authLoading ? 'Проверка...' : 'Войти в систему'}
               </button>
-
-              <div className="auth-note">
-                🌿 Заказчице (Миле) логин не требуется — режим просмотра открыт по умолчанию без пароля.
-              </div>
             </form>
           </div>
         </div>

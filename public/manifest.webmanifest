@@ -1,0 +1,19 @@
+{
+  "name": "Календарь контента ВК",
+  "short_name": "Календарь ВК",
+  "description": "План публикаций и интерактивный дашборд «Гостинцев двор» и «Чайная любовь»",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f2eb",
+  "theme_color": "#233e2f",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -72,7 +72,7 @@ body {
 .app-container {
   max-width: 1540px;
   margin: 0 auto;
-  padding: 24px 20px 48px;
+  padding: 20px 16px 60px;
 }
 
 /* ====================================================================
@@ -109,13 +109,13 @@ body {
   background: var(--card-white);
   border: 1px solid var(--border-cream);
   border-radius: var(--radius-lg);
-  padding: 20px 28px;
-  margin-bottom: 20px;
+  padding: 18px 24px;
+  margin-bottom: 16px;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
@@ -134,13 +134,12 @@ body {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
 }
 
-/* Крафтовый круглый медальон */
 .brand-seal {
-  width: 54px;
-  height: 54px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: var(--pine-soft);
   border: 2px dashed var(--pine-deep);
@@ -205,7 +204,7 @@ body {
 
 .brand-heading {
   font-family: var(--font-serif);
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--pine-deep);
   line-height: 1.15;
@@ -229,7 +228,7 @@ body {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -259,7 +258,7 @@ body {
 .team-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* Toggle Drag & Drop */
@@ -287,10 +286,10 @@ body {
 }
 
 .switch-track {
-  width: 32px;
-  height: 18px;
+  width: 30px;
+  height: 16px;
   background: #c7c0b4;
-  border-radius: 9px;
+  border-radius: 8px;
   position: relative;
   transition: background 0.2s ease;
 }
@@ -300,8 +299,8 @@ body {
 }
 
 .switch-thumb {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   background: #ffffff;
   border-radius: 50%;
   position: absolute;
@@ -319,8 +318,8 @@ body {
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
+  gap: 6px;
+  padding: 7px 12px;
   border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
@@ -364,32 +363,67 @@ body {
 }
 
 /* ====================================================================
-   ПАНЕЛЬ УПРАВЛЕНИЯ: МЕСЯЦЫ, ФИЛЬТРЫ И ПОИСК
+   ПАНЕЛЬ УПРАВЛЕНИЯ: РЕЖИМЫ ВИДА, МЕСЯЦЫ, ФИЛЬТРЫ И ПОИСК
    ==================================================================== */
 .control-bar {
   background: var(--card-white);
   border: 1px solid var(--border-cream);
   border-radius: var(--radius-md);
-  padding: 12px 20px;
-  margin-bottom: 20px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   box-shadow: var(--shadow-card);
+}
+
+/* Вкладки переключения вида */
+.view-mode-tabs {
+  display: inline-flex;
+  background: #f1ede4;
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 3px;
+}
+
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.view-tab:hover {
+  color: var(--text-main);
+}
+
+.view-tab.active {
+  background: #ffffff;
+  color: var(--pine-deep);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 /* Селектор месяцев */
 .calendar-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .nav-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-cream);
   background: #ffffff;
@@ -410,13 +444,13 @@ body {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  min-width: 150px;
+  min-width: 140px;
   justify-content: center;
 }
 
 .month-name {
   font-family: var(--font-serif);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--pine-deep);
   letter-spacing: -0.2px;
@@ -424,15 +458,15 @@ body {
 
 .year-name {
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
 }
 
 .btn-quick-today {
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: var(--radius-pill);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   background: var(--terracotta-soft);
   color: var(--terracotta);
@@ -450,17 +484,17 @@ body {
 .project-chips {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 5px;
+  padding: 5px 10px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   border: 1px solid var(--border-cream);
   background: #faf8f5;
@@ -476,7 +510,7 @@ body {
 
 .chip-count {
   font-size: 10px;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 10px;
   background: rgba(0,0,0,0.06);
   font-weight: 700;
@@ -514,19 +548,19 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 220px;
+  min-width: 180px;
 }
 
 .search-icon {
   position: absolute;
-  left: 10px;
+  left: 9px;
   color: var(--text-light);
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 6px 28px 6px 30px;
+  padding: 5px 24px 5px 28px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-cream);
   background: #faf8f5;
@@ -545,7 +579,7 @@ body {
 
 .search-clear {
   position: absolute;
-  right: 8px;
+  right: 6px;
   background: none;
   border: none;
   color: var(--text-light);
@@ -555,8 +589,49 @@ body {
   justify-content: center;
 }
 
+/* Плашка активного поиска */
+.search-active-banner {
+  background: var(--pine-soft);
+  border: 1px solid rgba(35, 62, 47, 0.2);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--pine-deep);
+}
+
+.btn-reset-search {
+  background: #ffffff;
+  border: 1px solid rgba(35, 62, 47, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pine-deep);
+  cursor: pointer;
+}
+
+.btn-reset-search:hover {
+  background: var(--pine-deep);
+  color: #fff;
+}
+
+.empty-month-banner {
+  background: #fdfaf3;
+  border-bottom: 1px solid var(--border-cream);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* ====================================================================
-   КАЛЕНДАРНАЯ ДОСКА (GRID)
+   РЕЖИМ 1: КАЛЕНДАРНАЯ ДОСКА (СЕТКА)
    ==================================================================== */
 .calendar-container {
   background: var(--card-white);
@@ -566,7 +641,6 @@ body {
   overflow: hidden;
 }
 
-/* Заголовки дней недели */
 .weekdays-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -575,12 +649,12 @@ body {
 }
 
 .weekday-cell {
-  padding: 10px 8px;
+  padding: 9px 6px;
   text-align: center;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   color: var(--pine-deep);
   border-right: 1px solid var(--border-cream);
 }
@@ -594,29 +668,30 @@ body {
   background: #faece7;
 }
 
-/* Сетка дней */
+/* Сетка дней с фиксированной минимальной высотой (защита от схлопывания) */
 .calendar-days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(148px, auto);
   background: var(--border-subtle);
-  gap: 1px; /* Сетка через зазор */
+  gap: 1px;
 }
 
-/* Карточка одного дня */
 .day-card {
   background: #ffffff;
-  min-height: 168px;
-  padding: 10px;
+  min-height: 148px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   transition: background 0.15s ease, box-shadow 0.15s ease;
   position: relative;
+  box-sizing: border-box;
 }
 
 .day-card.outside-month {
   background: #faf7f2;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .day-card.weekend-day {
@@ -633,12 +708,12 @@ body {
   box-shadow: inset 0 0 0 2px var(--pine-deep), 0 4px 12px rgba(35, 62, 47, 0.15);
 }
 
-/* Шапка дня */
+/* Шапка дня: число и кнопка добавления */
 .day-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  min-height: 22px;
 }
 
 .day-number-badge {
@@ -647,10 +722,12 @@ body {
   gap: 4px;
 }
 
+/* Числа дня: используем чистый tabular Montserrat, чтобы цифра 1 не выглядела как I */
 .day-num {
-  font-family: var(--font-serif);
-  font-size: 20px;
+  font-family: var(--font-sans);
+  font-size: 15px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--pine-deep);
   line-height: 1;
 }
@@ -667,15 +744,14 @@ body {
   line-height: 1;
 }
 
-/* Праздничные ленточки / вехи */
-.milestone-ribbon {
-  overflow: hidden;
-  max-width: 120px;
+/* Полоска праздника/вехи отдельной строкой */
+.day-milestone-bar {
+  margin-bottom: 2px;
 }
 
 .ribbon-holiday, .ribbon-fair {
   display: block;
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -700,9 +776,9 @@ body {
 .add-post-quick-btn {
   background: #f1ede4;
   border: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
   color: var(--pine-deep);
   cursor: pointer;
   display: flex;
@@ -718,26 +794,24 @@ body {
   opacity: 1;
 }
 
-/* Стопка постов в дне */
+/* Стопка постов в ячейке дня */
 .posts-stack {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   flex: 1;
 }
 
-/* ====================================================================
-   КАРТОЧКА ПОСТА («КРАФТОВАЯ МИНИ-КАРТОЧКА»)
-   ==================================================================== */
+/* Карточка поста в сетке */
 .post-card {
   background: #ffffff;
   border: 1px solid var(--border-cream);
   border-radius: var(--radius-sm);
-  padding: 7px 9px 8px;
+  padding: 6px 8px 7px;
   box-shadow: var(--shadow-subtle);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   position: relative;
@@ -760,7 +834,6 @@ body {
   border: 2px dashed var(--pine-deep);
 }
 
-/* Верхняя полоска-закладка */
 .card-top-stripe {
   position: absolute;
   top: 0;
@@ -777,20 +850,19 @@ body {
   background: var(--tea-amber);
 }
 
-/* Метаданные карточки */
 .card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 6px;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .project-tag {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -812,14 +884,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   color: var(--text-muted);
 }
 
-/* Заголовок темы */
 .card-title {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-main);
   line-height: 1.35;
@@ -829,25 +900,23 @@ body {
   overflow: hidden;
 }
 
-/* Подвал карточки */
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding-top: 4px;
   border-top: 1px dashed var(--border-cream);
-  min-height: 22px;
+  min-height: 20px;
 }
 
-/* Кнопка ссылки на черновик в ВК */
 .vk-pill-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: var(--radius-pill);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   color: var(--vk-blue);
   background: var(--vk-soft);
@@ -864,7 +933,7 @@ body {
 }
 
 .status-label {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--text-light);
   font-weight: 500;
 }
@@ -874,7 +943,6 @@ body {
   display: flex;
   align-items: center;
   cursor: grab;
-  padding: 1px;
 }
 
 .drag-handle:hover {
@@ -882,7 +950,272 @@ body {
 }
 
 /* ====================================================================
-   МОДАЛЬНЫЕ ОКНА (ДЕТАЛИ ПОСТА & ВХОД)
+   РЕЖИМ 2: ЛЕНТА ПО ДНЯМ (УДОБНО ДЛЯ СМАРТФОНОВ & МИНИ-ПРИЛОЖЕНИЯ)
+   ==================================================================== */
+.feed-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Горизонтальная полоска выбора недель */
+.week-filter-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  scrollbar-width: thin;
+}
+
+.week-filter-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.week-filter-strip::-webkit-scrollbar-thumb {
+  background: var(--border-cream);
+  border-radius: 4px;
+}
+
+.week-pill {
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  background: #ffffff;
+  border: 1px solid var(--border-cream);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.week-pill:hover {
+  background: #f4efe6;
+  color: var(--text-main);
+}
+
+.week-pill.active {
+  background: var(--pine-deep);
+  color: #ffffff;
+  border-color: var(--pine-deep);
+}
+
+.feed-days-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.feed-day-group {
+  background: #ffffff;
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.feed-day-group.is-today-feed {
+  border: 2px solid var(--terracotta);
+}
+
+.feed-day-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-cream);
+  margin-bottom: 14px;
+}
+
+.feed-day-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.feed-day-name {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--pine-deep);
+}
+
+.feed-day-date {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.feed-today-tag {
+  background: var(--terracotta);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+}
+
+.feed-milestone-tag {
+  background: var(--terracotta-soft);
+  color: var(--terracotta);
+  border: 1px solid var(--terracotta-border);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Сетка карточек внутри дня */
+.feed-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.feed-post-card {
+  background: #faf8f5;
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.feed-post-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+  background: #ffffff;
+  border-color: #d1c8b8;
+}
+
+.feed-post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.feed-post-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.feed-post-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.35;
+}
+
+.feed-post-meaning {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.feed-post-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-cream);
+  gap: 10px;
+}
+
+.feed-vk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--vk-blue);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.feed-vk-btn:hover {
+  background: var(--vk-hover);
+}
+
+.feed-planned-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.feed-details-hint {
+  font-size: 11.5px;
+  color: var(--pine-deep);
+  font-weight: 700;
+}
+
+/* ====================================================================
+   ПОДСКАЗКА PWA (УСТАНОВКА НА ЭКРАН СМАРТФОНА)
+   ==================================================================== */
+.pwa-install-banner {
+  margin-top: 24px;
+  background: #ffffff;
+  border: 1px solid var(--border-cream);
+  border-left: 4px solid var(--pine-deep);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-main);
+  box-shadow: var(--shadow-subtle);
+}
+
+.pwa-tip-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.4;
+}
+
+.pwa-phone-icon {
+  color: var(--pine-deep);
+  flex-shrink: 0;
+}
+
+.pwa-tip-close {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.pwa-tip-close:hover {
+  color: var(--text-main);
+}
+
+/* ====================================================================
+   МОДАЛЬНЫЕ ОКНА
    ==================================================================== */
 .modal-backdrop {
   position: fixed;
@@ -893,13 +1226,13 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 16px;
 }
 
 .modal-card {
   background: #ffffff;
   border-radius: var(--radius-lg);
-  max-width: 640px;
+  max-width: 620px;
   width: 100%;
   box-shadow: var(--shadow-modal);
   border: 1px solid var(--border-cream);
@@ -913,11 +1246,11 @@ body {
 }
 
 .modal-header-banner {
-  padding: 20px 24px;
+  padding: 18px 22px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: 14px;
   color: #ffffff;
 }
 
@@ -936,7 +1269,7 @@ body {
 }
 
 .modal-category-badge {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -945,7 +1278,7 @@ body {
 
 .modal-title-text {
   font-family: var(--font-serif);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -953,8 +1286,8 @@ body {
 .modal-close-btn {
   background: rgba(255, 255, 255, 0.15);
   border: none;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   color: #ffffff;
   cursor: pointer;
@@ -970,10 +1303,10 @@ body {
 }
 
 .modal-form-body {
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   max-height: 75vh;
   overflow-y: auto;
 }
@@ -981,13 +1314,13 @@ body {
 .form-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
 }
 
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .field-label {
@@ -1018,7 +1351,7 @@ body {
 
 .craft-input.font-bold {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .craft-input:focus, .craft-textarea:focus, .craft-select:focus {
@@ -1029,19 +1362,19 @@ body {
 }
 
 .readonly-value {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-main);
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
 .readonly-box {
   background: #faf8f5;
   border: 1px solid var(--border-cream);
   border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1.5;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
   color: var(--text-main);
 }
 
@@ -1058,9 +1391,9 @@ body {
   gap: 8px;
   background: var(--vk-blue);
   color: #ffffff;
-  padding: 10px 18px;
+  padding: 9px 16px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   text-decoration: none;
   width: fit-content;
@@ -1073,31 +1406,31 @@ body {
 }
 
 .no-link-msg {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-muted);
   font-style: italic;
-  padding: 4px 0;
+  padding: 3px 0;
 }
 
 .modal-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding-top: 14px;
+  gap: 10px;
+  padding-top: 12px;
   border-top: 1px solid var(--border-cream);
 }
 
 .btn-delete {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: none;
   border: 1px solid #f2cfcf;
   color: #c81e1e;
-  padding: 8px 12px;
+  padding: 7px 11px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -1110,7 +1443,7 @@ body {
 .footer-right-buttons {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-left: auto;
 }
 
@@ -1134,22 +1467,22 @@ body {
 
 /* Модалка входа */
 .auth-modal-card {
-  max-width: 440px;
+  max-width: 420px;
 }
 
 .auth-header {
-  padding: 24px 24px 16px;
+  padding: 22px 20px 14px;
   text-align: center;
   position: relative;
   border-bottom: 1px solid var(--border-cream);
 }
 
 .auth-icon-wrap {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--pine-soft);
-  margin: 0 auto 12px;
+  margin: 0 auto 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1157,21 +1490,21 @@ body {
 
 .auth-header h3 {
   font-family: var(--font-serif);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--pine-deep);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .auth-header p {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-muted);
 }
 
 .auth-header .modal-close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 14px;
+  right: 14px;
   background: #f1ede4;
   color: var(--text-muted);
 }
@@ -1180,25 +1513,17 @@ body {
   background: #fde8e8;
   color: #c81e1e;
   border: 1px solid #f8b4b4;
-  padding: 8px 12px;
+  padding: 7px 10px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
 }
 
 .auth-submit-btn {
   width: 100%;
   justify-content: center;
-  padding: 10px 16px;
+  padding: 9px 14px;
   margin-top: 4px;
-}
-
-.auth-note {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: center;
-  line-height: 1.4;
-  margin-top: 6px;
 }
 
 /* ====================================================================
@@ -1212,10 +1537,10 @@ body {
 
   .app-container {
     max-width: 100% !important;
-    padding: 10px !important;
+    padding: 8px !important;
   }
 
-  .brand-header, .control-bar, .modal-backdrop, .toast-notification, .drag-handle, .add-post-quick-btn {
+  .brand-header, .control-bar, .modal-backdrop, .toast-notification, .drag-handle, .add-post-quick-btn, .pwa-install-banner, .week-filter-strip {
     display: none !important;
   }
 
@@ -1225,7 +1550,7 @@ body {
   }
 
   .day-card {
-    min-height: 130px;
+    min-height: 120px;
     page-break-inside: avoid;
     border: 1px solid #cccccc;
   }
@@ -1237,43 +1562,54 @@ body {
 }
 
 /* ====================================================================
-   АДАПТИВНОСТЬ ПОД МОБИЛЬНЫЕ УСТРОЙСТВА
+   АДАПТИВНОСТЬ ПОД МОБИЛЬНЫЕ УСТРОЙСТВА & СМАРТФОНЫ
    ==================================================================== */
-@media (max-width: 900px) {
+@media (max-width: 820px) {
   .app-container {
-    padding: 12px 8px 30px;
+    padding: 10px 8px 36px;
   }
 
   .brand-header {
-    padding: 16px;
+    padding: 14px;
+    gap: 12px;
   }
 
   .brand-heading {
-    font-size: 20px;
+    font-size: 19px;
+  }
+
+  .brand-seal {
+    width: 42px;
+    height: 42px;
   }
 
   .control-bar {
-    padding: 10px 14px;
+    padding: 8px 10px;
+    gap: 8px;
   }
 
-  .weekdays-grid {
-    font-size: 9px;
+  .view-mode-tabs {
+    width: 100%;
+    justify-content: center;
   }
 
-  .weekday-cell {
-    padding: 6px 2px;
+  .view-tab {
+    flex: 1;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 12px;
   }
 
-  .day-card {
-    min-height: 120px;
-    padding: 6px;
+  .project-chips {
+    width: 100%;
+    justify-content: flex-start;
   }
 
-  .day-num {
-    font-size: 16px;
+  .search-box {
+    width: 100%;
   }
 
-  .card-title {
-    font-size: 10px;
+  .feed-cards-grid {
+    grid-template-columns: 1fr;
   }
 }
