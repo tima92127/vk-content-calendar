@@ -433,14 +433,14 @@ export default function App() {
 
           <div className="brand-titles">
             <div className="brand-eyebrow">
-              <span className="live-dot" title="Realtime база активна" />
-              <span>Единый календарь контента ВК • Череповец</span>
+              <span className="live-dot" title="Синхронизация активна" />
+              <span>Календарь контента ВК • Череповец</span>
             </div>
             <h1 className="brand-heading">
               «Гостинцев двор» <span className="ampersand">&</span> «Чайная любовь»
             </h1>
             <div className="brand-meta">
-              План публикаций и интерактивный дашборд
+              <span className="brand-subtitle-craft">План публикаций • Октябрь 2026</span>
             </div>
           </div>
         </div>
@@ -451,7 +451,7 @@ export default function App() {
             {user ? (
               <>
                 <Unlock size={13} className="access-icon pulse-icon" />
-                <span>Режим: <strong>Редактирование</strong></span>
+                <span>Режим: <strong>Редактор</strong></span>
               </>
             ) : (
               <>
@@ -481,13 +481,17 @@ export default function App() {
             </div>
           ) : (
             <button className="btn btn-login" onClick={() => setIsAuthModalOpen(true)}>
-              <Lock size={13} /> Вход для редакторов
+              <Lock size={13} />
+              <span className="btn-text-desktop">Вход для редакторов</span>
+              <span className="btn-text-mobile">Вход</span>
             </button>
           )}
 
           {/* Печать / PDF */}
           <button className="btn btn-print" onClick={() => window.print()} title="Распечатать или сохранить чистый PDF">
-            <Printer size={14} /> Печать / PDF
+            <Printer size={13} />
+            <span className="btn-text-desktop">Печать / PDF</span>
+            <span className="btn-text-mobile">PDF</span>
           </button>
         </div>
       </header>
@@ -497,18 +501,18 @@ export default function App() {
         {/* Переключатель вида (Календарь / Лента по дням для мобильных) */}
         <div className="view-mode-tabs">
           <button 
+            className={`view-tab ${viewMode === 'feed' ? 'active' : ''}`}
+            onClick={() => setViewMode('feed')}
+            title="Список по дням (Удобно для смартфонов)"
+          >
+            <List size={14} /> <span>По дням</span>
+          </button>
+          <button 
             className={`view-tab ${viewMode === 'calendar' ? 'active' : ''}`}
             onClick={() => setViewMode('calendar')}
             title="Сетка месяца"
           >
-            <LayoutGrid size={14} /> Сетка месяца
-          </button>
-          <button 
-            className={`view-tab ${viewMode === 'feed' ? 'active' : ''}`}
-            onClick={() => setViewMode('feed')}
-            title="Лента по дням (Удобно для смартфонов)"
-          >
-            <List size={14} /> Список по дням
+            <LayoutGrid size={14} /> <span>Сетка</span>
           </button>
         </div>
 
@@ -757,31 +761,31 @@ export default function App() {
               className={`week-pill ${selectedWeek === 'w1' ? 'active' : ''}`}
               onClick={() => setSelectedWeek('w1')}
             >
-              Неделя 1 (28.09 – 04.10)
+              <span className="week-badge">1 нед</span> <span>28.09 – 04.10</span>
             </button>
             <button 
               className={`week-pill ${selectedWeek === 'w2' ? 'active' : ''}`}
               onClick={() => setSelectedWeek('w2')}
             >
-              Неделя 2 (05.10 – 11.10)
+              <span className="week-badge">2 нед</span> <span>05.10 – 11.10</span>
             </button>
             <button 
               className={`week-pill ${selectedWeek === 'w3' ? 'active' : ''}`}
               onClick={() => setSelectedWeek('w3')}
             >
-              Неделя 3 (12.10 – 18.10)
+              <span className="week-badge">3 нед</span> <span>12.10 – 18.10</span>
             </button>
             <button 
               className={`week-pill ${selectedWeek === 'w4' ? 'active' : ''}`}
               onClick={() => setSelectedWeek('w4')}
             >
-              Неделя 4 (19.10 – 25.10)
+              <span className="week-badge">4 нед</span> <span>19.10 – 25.10</span>
             </button>
             <button 
               className={`week-pill ${selectedWeek === 'w5' ? 'active' : ''}`}
               onClick={() => setSelectedWeek('w5')}
             >
-              Неделя 5 (26.10 – 31.10)
+              <span className="week-badge">5 нед</span> <span>26.10 – 31.10</span>
             </button>
           </div>
 
@@ -874,7 +878,8 @@ export default function App() {
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <VkIcon size={14} />
-                                <span>Открыть черновик во ВКонтакте ↗</span>
+                                <span className="btn-text-desktop">Открыть черновик ВК ↗</span>
+                                <span className="btn-text-mobile">Черновик ВК ↗</span>
                               </a>
                             ) : (
                               <span className="feed-planned-badge">
@@ -883,7 +888,7 @@ export default function App() {
                             )}
 
                             <span className="feed-details-hint">
-                              Подробнее ➔
+                              Подробнее →
                             </span>
                           </div>
                         </div>
