@@ -762,6 +762,14 @@ html, body {
   box-shadow: 0 0 0 1px var(--terracotta);
 }
 
+.day-mobile-indicators {
+  display: none;
+}
+
+.mobile-selected-day-panel {
+  display: none;
+}
+
 .day-card.drag-target-hover {
   background: var(--pine-soft);
   border: 2px dashed var(--pine-deep);
@@ -1953,16 +1961,424 @@ html, body {
     font-weight: 700;
   }
 
-  /* В режиме сетки на мобильных разрешен горизонтальный скролл */
+  /* ========================================================
+     МОБИЛЬНАЯ СЕТКА: КОМПАКТНАЯ МАТРИЦА МЕСЯЦА (100% ШИРИНЫ, БЕЗ СКРОЛЛА)
+     ======================================================== */
   .calendar-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: visible;
     width: 100%;
-    padding: 10px;
+    padding: 8px 4px;
+    box-sizing: border-box;
   }
 
-  .weekdays-grid, .calendar-days-grid {
-    min-width: 660px;
+  .weekdays-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+    min-width: 0;
+    width: 100%;
+    margin-bottom: 5px;
+  }
+
+  .weekday-cell {
+    font-size: 11px;
+    padding: 4px 0;
+    letter-spacing: 0.2px;
+  }
+
+  .calendar-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: minmax(50px, auto);
+    gap: 3px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .day-card {
+    min-height: 50px;
+    padding: 4px 2px 3px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2px;
+    position: relative;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .day-card:active {
+    transform: scale(0.96);
+  }
+
+  .day-card.is-selected-day {
+    border: 2px solid var(--pine-deep);
+    background: #ffffff;
+    box-shadow: 0 0 0 2px var(--pine-deep), 0 3px 8px rgba(35, 62, 47, 0.18);
+    transform: translateY(-2px);
+    z-index: 3;
+  }
+
+  .day-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .day-number-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .day-num {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-main);
+  }
+
+  .today-craft-label {
+    display: none;
+  }
+
+  .day-card.is-today .day-num {
+    background: var(--terracotta);
+    color: #ffffff;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    box-shadow: 0 1px 3px rgba(198, 83, 40, 0.35);
+  }
+
+  .day-card.outside-month {
+    opacity: 0.35;
+  }
+
+  /* Скрываем громоздкие вертикальные карточки из маленьких плиток на мобильных */
+  .posts-stack {
+    display: none;
+  }
+
+  /* Вместо этого показываем аккуратные микро-индикаторы постов в плитке дня */
+  .day-mobile-indicators {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .mobile-post-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobile-post-dot.dot-fair {
+    background: var(--pine-deep);
+    color: #ffffff;
+  }
+
+  .mobile-post-dot.dot-tea {
+    background: var(--tea-amber);
+    color: #ffffff;
+  }
+
+  .day-milestone-bar {
+    width: 100%;
+    text-align: center;
+    padding: 0;
+    margin-top: 1px;
+  }
+
+  .day-milestone-bar .ribbon-text {
+    display: none;
+  }
+
+  .day-milestone-bar .ribbon-fair,
+  .day-milestone-bar .ribbon-holiday {
+    padding: 0;
+    font-size: 10px;
+    background: transparent;
+    display: inline-block;
+  }
+
+  /* ========================================================
+     ПАНЕЛЬ ВЫБРАННОГО ДНЯ ПОД СЕТКОЙ НА МОБИЛЬНЫХ
+     ======================================================== */
+  .mobile-selected-day-panel {
+    display: block;
+    margin-top: 12px;
+    background: #ffffff;
+    border: 1px solid var(--border-cream);
+    border-radius: var(--radius-lg);
+    padding: 14px 12px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mobile-selected-day-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--pine-deep) 0%, var(--pine-deep) 60%, var(--tea-amber) 60%, var(--tea-amber) 100%);
+  }
+
+  .selected-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-cream);
+    margin-bottom: 12px;
+  }
+
+  .selected-day-date-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .selected-day-icon-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--pine-soft);
+    color: var(--pine-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .selected-day-texts {
+    min-width: 0;
+  }
+
+  .selected-day-title {
+    font-family: var(--font-serif);
+    font-size: 16.5px;
+    font-weight: 700;
+    color: var(--pine-deep);
+    text-transform: capitalize;
+    margin: 0;
+    line-height: 1.25;
+  }
+
+  .selected-day-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .selected-day-milestone-card {
+    background: #fff8f0;
+    border-left: 3px solid var(--terracotta);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+
+  .selected-day-milestone-card .milestone-badge {
+    font-weight: 700;
+    color: var(--terracotta);
+    display: block;
+  }
+
+  .selected-day-milestone-card .milestone-desc {
+    margin: 4px 0 0;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.35;
+  }
+
+  .selected-day-posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .selected-day-post-card {
+    background: #faf8f5;
+    border: 1px solid var(--border-cream);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .selected-day-post-card:active {
+    transform: scale(0.985);
+  }
+
+  .selected-day-post-card.post-fair .card-top-stripe {
+    background: var(--pine-deep);
+    height: 3px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .selected-day-post-card.post-tea .card-top-stripe {
+    background: var(--tea-amber);
+    height: 3px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .post-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 7px;
+    flex-wrap: wrap;
+  }
+
+  .post-time-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .status-badge-inline {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    margin-left: auto;
+  }
+
+  .status-badge-inline.status-planned {
+    background: rgba(35, 62, 47, 0.08);
+    color: var(--pine-deep);
+  }
+
+  .status-badge-inline.status-draft {
+    background: rgba(0, 119, 255, 0.1);
+    color: #0077ff;
+  }
+
+  .status-badge-inline.status-published {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+  }
+
+  .post-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 6px 0;
+    line-height: 1.35;
+  }
+
+  .post-card-snippet {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin: 0 0 10px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .post-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-cream);
+  }
+
+  .post-vk-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #0077ff;
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0, 119, 255, 0.2);
+  }
+
+  .vk-pending-label {
+    font-size: 11px;
+    color: var(--text-light);
+    font-style: italic;
+  }
+
+  .post-details-btn {
+    background: transparent;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--pine-deep);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+
+  .empty-day-craft-box {
+    text-align: center;
+    padding: 24px 14px;
+    background: #faf8f5;
+    border: 1px dashed var(--border-cream);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+  }
+
+  .empty-day-craft-box span {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--pine-deep);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .empty-day-craft-box p {
+    font-size: 11.5px;
+    margin: 0;
+    color: var(--text-muted);
   }
 
   /* Мобильная адаптация модальных окон */

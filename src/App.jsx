@@ -59,6 +59,8 @@ export default function App() {
 
   // Текущий месяц (по умолчанию Октябрь 2026, 9 в JS 0-indexed)
   const [currentDate, setCurrentDate] = useState(new Date(2026, 9, 1));
+  // Выбранный день в сетке для мобильного инспектора
+  const [selectedGridDate, setSelectedGridDate] = useState('2026-10-01');
   
   // Состояние авторизации
   const [user, setUser] = useState(null);
@@ -328,13 +330,20 @@ export default function App() {
 
   // НАВИГАЦИЯ
   const prevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    const nextD = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    setCurrentDate(nextD);
+    const mStr = String(nextD.getMonth() + 1).padStart(2, '0');
+    setSelectedGridDate(`${nextD.getFullYear()}-${mStr}-01`);
   };
   const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    const nextD = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    setCurrentDate(nextD);
+    const mStr = String(nextD.getMonth() + 1).padStart(2, '0');
+    setSelectedGridDate(`${nextD.getFullYear()}-${mStr}-01`);
   };
   const goToOctober = () => {
     setCurrentDate(new Date(2026, 9, 1));
+    setSelectedGridDate('2026-10-01');
   };
 
   // ГЕНЕРАЦИЯ ДНЕЙ МЕСЯЦА
@@ -398,6 +407,21 @@ export default function App() {
   // Проверка постов на текущий отображаемый месяц
   const currentMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   const postsInCurrentMonth = posts.filter(p => p.date.startsWith(currentMonthPrefix));
+
+  // Посты и вехи для выбранного дня в мобильной сетке
+  const selectedDayPosts = posts.filter(p => {
+    if (p.date !== selectedGridDate) return false;
+    if (filter !== 'all' && p.project !== filter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return p.title?.toLowerCase().includes(q) || p.meaning?.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  const selectedDayMilestones = milestones.filter(m => {
+    return selectedGridDate >= m.date_start && selectedGridDate <= m.date_end;
+  });
 
   // Группировка для мобильного вида (Feed / Agenda)
   const uniqueDates = [...new Set(posts.map(p => p.date))].sort();
@@ -639,7 +663,8 @@ export default function App() {
               return (
                 <div 
                   key={idx}
-                  className={`day-card ${!slot.isCurrentMonth ? 'outside-month' : ''} ${isWeekend ? 'weekend-day' : ''} ${isToday ? 'is-today' : ''} ${isHovered ? 'drag-target-hover' : ''}`}
+                  className={`day-card ${!slot.isCurrentMonth ? 'outside-month' : ''} ${isWeekend ? 'weekend-day' : ''} ${isToday ? 'is-today' : ''} ${isHovered ? 'drag-target-hover' : ''} ${slot.dateStr === selectedGridDate ? 'is-selected-day' : ''}`}
+                  onClick={() => setSelectedGridDate(slot.dateStr)}
                   onDragOver={(e) => handleDragOver(e, slot.dateStr)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, slot.dateStr)}
@@ -654,7 +679,7 @@ export default function App() {
                     {editMode && slot.isCurrentMonth && (
                       <button 
                         className="add-post-quick-btn" 
-                        onClick={() => openNewPostModal(slot.dateStr)}
+                        onClick={(e) => { e.stopPropagation(); openNewPostModal(slot.dateStr); }}
                         title="Добавить публикацию на этот день"
                       >
                         <Plus size={11} />
@@ -662,18 +687,34 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Полоска праздника/вехи отдельной строкой (не сжимает дату) */}
+                  {/* Полоска праздника/вехи отдельной строкой */}
                   {dayMilestones.length > 0 && (
                     <div className="day-milestone-bar" title={dayMilestones[0].summary}>
                       {dayMilestones[0].category === 'fair' ? (
-                        <span className="ribbon-fair">🎪 {dayMilestones[0].summary}</span>
+                        <span className="ribbon-fair">🎪 <span className="ribbon-text">{dayMilestones[0].summary}</span></span>
                       ) : (
-                        <span className="ribbon-holiday">🍎 {dayMilestones[0].summary}</span>
+                        <span className="ribbon-holiday">🍎 <span className="ribbon-text">{dayMilestones[0].summary}</span></span>
                       )}
                     </div>
                   )}
 
-                  {/* Список карточек постов */}
+                  {/* Мобильные компактные индикаторы для плитки */}
+                  <div className="day-mobile-indicators">
+                    {dayPosts.map((post, pIdx) => {
+                      const isFair = post.project === 'fair';
+                      return (
+                        <span 
+                          key={post.id || pIdx} 
+                          className={`mobile-post-dot ${isFair ? 'dot-fair' : 'dot-tea'}`}
+                          title={`${isFair ? 'Ярмарка' : 'Чайная'}: ${post.title}`}
+                        >
+                          {isFair ? <PineIcon size={9} /> : <TeaLeafIcon size={9} />}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {/* Список карточек постов для десктопа (на мобильных скрывается через CSS) */}
                   <div className="posts-stack">
                     {dayPosts.map(post => {
                       const isFair = post.project === 'fair';
@@ -682,11 +723,11 @@ export default function App() {
 
                       return (
                         <article 
-                          key={post.id}
+                          key={post.id} 
                           className={`post-card ${isFair ? 'post-fair' : 'post-tea'} ${isDragging ? 'is-dragged' : ''} ${editMode ? 'can-drag' : ''}`}
                           draggable={editMode}
                           onDragStart={(e) => handleDragStart(e, post)}
-                          onClick={() => openPostModal(post)}
+                          onClick={(e) => { e.stopPropagation(); openPostModal(post); }}
                         >
                           <div className="card-top-stripe" />
 
@@ -741,6 +782,115 @@ export default function App() {
               );
             })}
           </div>
+
+          {/* ========================================================
+              ПАНЕЛЬ ВЫБРАННОГО ДНЯ ДЛЯ МОБИЛЬНЫХ (ПОД СЕТКОЙ)
+              ======================================================== */}
+          <section className="mobile-selected-day-panel">
+            <div className="selected-day-header">
+              <div className="selected-day-date-info">
+                <div className="selected-day-icon-circle">
+                  <CalendarIcon size={16} />
+                </div>
+                <div className="selected-day-texts">
+                  <h4 className="selected-day-title">
+                    {new Date(selectedGridDate).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </h4>
+                  <span className="selected-day-subtitle">
+                    {selectedDayPosts.length === 0 
+                      ? 'Нет публикаций' 
+                      : `${selectedDayPosts.length} ${selectedDayPosts.length === 1 ? 'публикация' : (selectedDayPosts.length < 5 ? 'публикации' : 'публикаций')}`}
+                  </span>
+                </div>
+              </div>
+
+              {editMode && (
+                <button 
+                  className="btn btn-outline"
+                  style={{ padding: '5px 10px', fontSize: '11px' }}
+                  onClick={() => openNewPostModal(selectedGridDate)}
+                >
+                  <Plus size={13} /> Добавить
+                </button>
+              )}
+            </div>
+
+            {/* Праздник или маркет дня */}
+            {selectedDayMilestones.length > 0 && (
+              <div className="selected-day-milestone-card">
+                <span className="milestone-badge">
+                  {selectedDayMilestones[0].category === 'fair' ? '🎪 ' : '🍎 '}
+                  {selectedDayMilestones[0].summary}
+                </span>
+                {selectedDayMilestones[0].description && (
+                  <p className="milestone-desc">{selectedDayMilestones[0].description}</p>
+                )}
+              </div>
+            )}
+
+            {/* Карточки постов на выбранный день */}
+            {selectedDayPosts.length > 0 ? (
+              <div className="selected-day-posts-list">
+                {selectedDayPosts.map(post => {
+                  const isFair = post.project === 'fair';
+                  const hasVkLink = Boolean(post.vk_draft_url && post.vk_draft_url.trim());
+
+                  return (
+                    <div 
+                      key={post.id} 
+                      className={`selected-day-post-card ${isFair ? 'post-fair' : 'post-tea'}`}
+                      onClick={() => openPostModal(post)}
+                    >
+                      <div className="card-top-stripe" />
+                      
+                      <div className="post-card-meta">
+                        <span className={`project-tag ${isFair ? 'tag-fair' : 'tag-tea'}`}>
+                          {isFair ? <><PineIcon size={11} /> Гостинцев двор</> : <><TeaLeafIcon size={11} /> Чайная любовь</>}
+                        </span>
+                        <span className="post-time-badge">
+                          <Clock size={11} /> {post.time || '10:30'}
+                        </span>
+                        <span className={`status-badge-inline status-${post.status || 'planned'}`}>
+                          {post.status === 'published' ? '✅ Опубликован' : (post.status === 'draft' ? '⏳ Черновик в ВК' : '📝 В плане')}
+                        </span>
+                      </div>
+
+                      <h5 className="post-card-title">{post.title}</h5>
+
+                      {post.meaning && (
+                        <p className="post-card-snippet">{post.meaning}</p>
+                      )}
+
+                      <div className="post-card-actions">
+                        {hasVkLink ? (
+                          <a 
+                            href={post.vk_draft_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="post-vk-action-btn"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <VkIcon size={13} /> Черновик ВК ↗
+                          </a>
+                        ) : (
+                          <span className="vk-pending-label">Черновик формируется</span>
+                        )}
+
+                        <button className="post-details-btn" onClick={() => openPostModal(post)}>
+                          Подробнее →
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-day-craft-box">
+                <span>✨ В этот день публикаций нет</span>
+                <p>Нажмите на любую дату с цветными точками 🌲/🍵 в календаре выше, чтобы посмотреть посты.</p>
+              </div>
+            )}
+          </section>
         </main>
       )}
 
