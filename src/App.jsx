@@ -179,9 +179,16 @@ export default function App() {
       })
       .subscribe();
 
+    // Обработка печати в PDF: автоматическое переключение в полную сетку месяца
+    const handleBeforePrint = () => {
+      setViewMode('calendar');
+    };
+    window.addEventListener('beforeprint', handleBeforePrint);
+
     return () => {
       subscription.unsubscribe();
       supabase.removeChannel(channel);
+      window.removeEventListener('beforeprint', handleBeforePrint);
     };
   }, []);
 
@@ -341,6 +348,18 @@ export default function App() {
     const postToMove = reschedulePost;
     setReschedulePost(null);
     await movePostToDate(postToMove.id, rescheduleDate);
+  };
+
+  // ПЕЧАТЬ И ВЫГРУЗКА В PDF
+  const handlePrint = () => {
+    if (viewMode !== 'calendar') {
+      setViewMode('calendar');
+      setTimeout(() => {
+        window.print();
+      }, 250);
+    } else {
+      window.print();
+    }
   };
 
   // ОТКРЫТИЕ ПОСТА
@@ -666,6 +685,13 @@ export default function App() {
           </div>
         </div>
 
+        {/* Легенда только для чистого экспорта в PDF и печати */}
+        <div className="print-header-legend">
+          <span className="legend-item"><span className="legend-dot dot-fair" /> «Гостинцев двор»</span>
+          <span className="legend-item"><span className="legend-dot dot-tea" /> «Чайная любовь»</span>
+          <span className="legend-item"><span className="legend-dot dot-milestone" /> События и праздники</span>
+        </div>
+
         <div className="header-actions">
           {/* Индикатор статуса доступа (без упоминания конкретных имён) */}
           <div className={`access-pill ${user ? 'mode-team' : 'mode-guest'}`}>
@@ -729,7 +755,7 @@ export default function App() {
           )}
 
           {/* Печать / PDF */}
-          <button className="btn btn-print" onClick={() => window.print()} title="Распечатать или сохранить чистый PDF">
+          <button className="btn btn-print" onClick={handlePrint} title="Распечатать или сохранить чистый PDF">
             <Printer size={13} />
             <span className="btn-text-desktop">Печать / PDF</span>
             <span className="btn-text-mobile">PDF</span>

@@ -896,7 +896,8 @@ html, body {
 }
 
 /* Список постов в ячейке дня */
-.day-posts-list {
+.day-posts-list,
+.posts-stack {
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -904,6 +905,10 @@ html, body {
   min-width: 0;
   width: 100%;
   overflow: hidden;
+}
+
+.print-header-legend {
+  display: none;
 }
 
 .post-card, .post-card-mini {
@@ -2024,24 +2029,10 @@ html, body {
 }
 
 /* ====================================================================
-   ПЕЧАТЬ (PRINT CSS)
-   ==================================================================== */
-@media print {
-  body { background: #ffffff !important; padding: 0 !important; }
-  .app-container { max-width: 100% !important; padding: 4px !important; }
-  .brand-header, .control-bar, .modal-backdrop, .toast-notification, 
-  .drag-handle, .add-post-quick-btn, .pwa-install-banner, .week-filter-strip {
-    display: none !important;
-  }
-  .calendar-container { border: 1px solid #000000; box-shadow: none; }
-  .day-card { min-height: 100px; page-break-inside: avoid; border: 1px solid #cccccc; }
-}
-
-/* ====================================================================
-   МОБИЛЬНАЯ АДАПТАЦИЯ (<= 768px)
+   МОБИЛЬНАЯ АДАПТАЦИЯ (<= 768px ЭКРАНЫ)
    Полный запрет переполнения, удобный тач-интерфейс
    ==================================================================== */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   /* Переключатель ярлыков кнопок */
   .btn-text-desktop {
     display: none !important;
@@ -2751,5 +2742,399 @@ html, body {
   .btn-delete {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ====================================================================
+   ПЕЧАТЬ И ЭКСПОРТ В PDF (PRINT & PDF EXPORT)
+   Гарантирует полный вид сетки месяца с плашками постов как на десктопе
+   ==================================================================== */
+@page {
+  size: landscape;
+  margin: 6mm 8mm;
+}
+
+@media print {
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #1a2a20 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 10px !important;
+    width: 100% !important;
+    min-width: 980px !important;
+    height: auto !important;
+  }
+
+  .app-container {
+    width: 100% !important;
+    min-width: 980px !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Скрываем все элементы управления, модалки, кнопки, баннеры и мобильные панели */
+  .control-bar,
+  .modal-backdrop,
+  .toast-notification,
+  .drag-handle,
+  .mobile-drag-grip,
+  .post-reschedule-btn,
+  .add-post-quick-btn,
+  .pwa-install-banner,
+  .week-filter-strip,
+  .touch-drag-ghost,
+  .header-actions,
+  .access-pill,
+  .team-controls,
+  .btn-login,
+  .btn-print,
+  .toggle-dnd,
+  .view-mode-tabs,
+  .calendar-nav button,
+  .calendar-nav,
+  .feed-container,
+  .mobile-selected-day-panel,
+  .day-mobile-indicators,
+  .live-dot,
+  .vk-pill-btn,
+  .card-footer,
+  .drag-hint-text,
+  .card-top-stripe,
+  .empty-month-banner button {
+    display: none !important;
+  }
+
+  /* Печатная шапка */
+  .brand-header {
+    background: #ffffff !important;
+    border: none !important;
+    border-bottom: 2px solid #233e2f !important;
+    border-radius: 0 !important;
+    padding: 4px 0 8px 0 !important;
+    margin-bottom: 6px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 980px !important;
+  }
+
+  .header-left {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .brand-seal {
+    width: 36px !important;
+    height: 36px !important;
+    border: 2px solid #233e2f !important;
+    background: #fdfbf7 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .brand-titles {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .brand-eyebrow {
+    font-size: 8.5px !important;
+    color: #666666 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    white-space: nowrap !important;
+  }
+
+  .brand-heading {
+    font-size: 15px !important;
+    color: #233e2f !important;
+    margin: 1px 0 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .brand-meta {
+    font-size: 10.5px !important;
+    color: #c65328 !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+  }
+
+  .print-header-legend {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    font-size: 9.5px !important;
+    font-weight: 600 !important;
+    color: #444444 !important;
+  }
+
+  .legend-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+  }
+
+  .legend-dot {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 2px !important;
+    display: inline-block !important;
+  }
+
+  .legend-dot.dot-fair {
+    background: #233e2f !important;
+  }
+
+  .legend-dot.dot-tea {
+    background: #d4973b !important;
+  }
+
+  .legend-dot.dot-milestone {
+    background: #c65328 !important;
+  }
+
+  /* Сетка месяца для печати */
+  .calendar-container {
+    background: #ffffff !important;
+    border: 1px solid #d4ccbf !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+    width: 100% !important;
+    min-width: 980px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .weekdays-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 3px !important;
+    margin-bottom: 3px !important;
+    width: 100% !important;
+  }
+
+  .weekday-cell {
+    background: #233e2f !important;
+    color: #ffffff !important;
+    padding: 3px 4px !important;
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    border-radius: 3px !important;
+  }
+
+  .weekday-full {
+    display: inline !important;
+  }
+
+  .weekday-short {
+    display: none !important;
+  }
+
+  .calendar-days-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    grid-auto-rows: minmax(80px, auto) !important;
+    gap: 3px !important;
+    width: 100% !important;
+  }
+
+  /* Карточка дня */
+  .day-card {
+    background: #faf8f5 !important;
+    border: 1px solid #dcd5ca !important;
+    border-radius: 3px !important;
+    padding: 3px 4px !important;
+    min-height: 80px !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 2px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+  }
+
+  .day-card.outside-month {
+    background: #f6f3ed !important;
+    opacity: 0.45 !important;
+  }
+
+  .day-card.weekend-day {
+    background: #f7f4ee !important;
+  }
+
+  .day-card.is-today {
+    border: 1.5px solid #c65328 !important;
+  }
+
+  .day-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    border-bottom: 1px solid #ede7de !important;
+    padding-bottom: 1px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .day-number-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  .day-num {
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    color: #233e2f !important;
+    line-height: 1 !important;
+  }
+
+  .day-card.is-today .day-num {
+    background: #c65328 !important;
+    color: #ffffff !important;
+    width: 15px !important;
+    height: 15px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 9.5px !important;
+  }
+
+  .today-craft-label {
+    display: none !important;
+  }
+
+  /* Вехи и праздники */
+  .day-milestone-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5px !important;
+    width: 100% !important;
+    margin: 1px 0 !important;
+    text-align: left !important;
+  }
+
+  .milestone-ribbon-item {
+    display: block !important;
+    padding: 1.5px 3px !important;
+    border-radius: 2px !important;
+    font-size: 7.5px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  .milestone-ribbon-item .ribbon-text {
+    display: inline !important;
+  }
+
+  /* ПЛАШКИ ПОСТОВ (ВИД КАК НА ДЕСКТОПЕ) */
+  .posts-stack,
+  .day-posts-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2.5px !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .post-card {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: #ffffff !important;
+    border: 1px solid #d4ccbf !important;
+    border-left: 3px solid #233e2f !important;
+    border-radius: 3px !important;
+    padding: 2.5px 4px !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    cursor: default !important;
+    transform: none !important;
+    text-align: left !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  .post-card.post-tea {
+    border-left-color: #d4973b !important;
+  }
+
+  .card-meta {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 1.5px !important;
+  }
+
+  .project-tag {
+    font-size: 7px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.2px !important;
+    padding: 1px 3px !important;
+    border-radius: 2px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+
+  .tag-fair {
+    background: #eaf1ec !important;
+    color: #233e2f !important;
+  }
+
+  .tag-tea {
+    background: #fbf3e6 !important;
+    color: #8f5c15 !important;
+  }
+
+  .card-time {
+    font-size: 7.5px !important;
+    font-weight: 700 !important;
+    color: #555555 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+
+  .card-title {
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    color: #1a2a20 !important;
+    margin: 0 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
   }
 }
