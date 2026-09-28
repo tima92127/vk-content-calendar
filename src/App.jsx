@@ -24,8 +24,12 @@ import {
   Share2,
   Sparkles,
   ArrowRightLeft,
-  Lightbulb
+  Lightbulb,
+  UploadCloud,
+  FileDown,
+  WifiOff
 } from 'lucide-react';
+import fallbackData from './data/fallbackData.json';
 
 // Фирменные векторные иконки брендов
 const VkIcon = ({ size = 13, className = "" }) => (
@@ -156,8 +160,13 @@ const getStatusInfo = (statusKey) => {
 };
 
 export default function App() {
-  const [posts, setPosts] = useState([]);
-  const [milestones, setMilestones] = useState([]);
+  const [posts, setPosts] = useState(() => fallbackData?.posts || []);
+  const [milestones, setMilestones] = useState(() => fallbackData?.milestones || []);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [githubToken, setGithubToken] = useState(() => (typeof window !== 'undefined' ? (localStorage.getItem('gh_dispatch_token') || '') : ''));
+  const [isDispatching, setIsDispatching] = useState(false);
+
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
@@ -239,27 +248,79 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Загрузка постов
+  // Загрузка постов с таймаутом для устойчивости без VPN
   const fetchPosts = async () => {
     try {
-      const { data, error } = await supabase
+      const fetchPromise = supabase
         .from('posts')
         .select('*')
         .order('order_index', { ascending: true });
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase network timeout (без VPN)')), 4000)
+      );
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
       if (error) throw error;
-      setPosts(data || []);
+      if (data && data.length > 0) {
+        setPosts(data);
+        setIsOfflineMode(false);
+      }
     } catch (err) {
-      console.error('Ошибка загрузки публикаций:', err.message);
+      console.warn('⚠️ Supabase недоступен (без VPN). Используются локальные кэшированные данные:', err.message);
+      setIsOfflineMode(true);
     }
   };
 
-  // Загрузка вех
+  // Загрузка вех с таймаутом
   const fetchMilestones = async () => {
     try {
-      const { data } = await supabase.from('milestones').select('*');
-      setMilestones(data || []);
+      const fetchPromise = supabase.from('milestones').select('*').order('date_start', { ascending: true });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase network timeout')), 4000)
+      );
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setMilestones(data);
+      }
     } catch (err) {
-      console.error('Ошибка загрузки вех:', err.message);
+      console.warn('⚠️ Supabase недоступен для вех, используются локальные данные:', err.message);
+    }
+  };
+
+  // ТРИГГЕР ПУБЛИКАЦИИ НА GITHUB ДЛЯ МИЛЫ (БЕЗ VPN)
+  const triggerGitHubDeploy = async () => {
+    if (!githubToken.trim()) {
+      showToast('⚠️ Введите GitHub Personal Access Token');
+      return;
+    }
+
+    setIsDispatching(true);
+    try {
+      localStorage.setItem('gh_dispatch_token', githubToken.trim());
+      const response = await fetch('https://api.github.com/repos/tima92127/vk-content-calendar/actions/workflows/deploy.yml/dispatches', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${githubToken.trim()}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ref: 'main' })
+      });
+
+      if (response.ok || response.status === 204) {
+        showToast('🚀 Обновление запущено на GitHub! Через 1-2 мин сайт обновится для Милы.');
+        setIsPublishModalOpen(false);
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        showToast('⚠️ Ошибка запуска: ' + (errData.message || response.statusText));
+      }
+    } catch (err) {
+      showToast('⚠️ Ошибка сети при запросе к GitHub: ' + err.message);
+    } finally {
+      setIsDispatching(false);
     }
   };
 
@@ -895,9 +956,27 @@ export default function App() {
             )}
           </div>
 
+          {/* Индикатор офлайн-режима без VPN */}
+          {isOfflineMode && (
+            <div className="connection-pill mode-offline" title="Сервер Supabase недоступен (без VPN). Отображаются сохранённые данные контент-плана.">
+              <WifiOff size={12} />
+              <span className="btn-text-desktop">Снимок без VPN</span>
+            </div>
+          )}
+
           {/* Управление для команды */}
           {user ? (
             <div className="team-controls">
+              <button 
+                className="btn btn-publish" 
+                onClick={() => setIsPublishModalOpen(true)} 
+                title="Опубликовать актуальный снимок плана для Милы (без VPN)"
+              >
+                <UploadCloud size={13} />
+                <span className="btn-text-desktop">Опубликовать для Милы 🚀</span>
+                <span className="btn-text-mobile">Обновить 🚀</span>
+              </button>
+
               <button 
                 className="btn btn-milestone-action" 
                 onClick={() => openNewMilestoneModal(selectedGridDate)} 
@@ -941,11 +1020,23 @@ export default function App() {
             </button>
           )}
 
+          {/* Прямое скачивание готового PDF (без VPN) */}
+          <a 
+            href="./calendar_october_2026.pdf" 
+            download="Календарь_Октябрь_2026_Гостинцев_Двор_Чайная_Любовь.pdf" 
+            className="btn btn-download-pdf" 
+            title="Скачать готовый альбомный PDF-календарь прямо сейчас"
+          >
+            <FileDown size={13} />
+            <span className="btn-text-desktop">Скачать PDF</span>
+            <span className="btn-text-mobile">PDF</span>
+          </a>
+
           {/* Печать / PDF */}
           <button className="btn btn-print" onClick={handlePrint} title="Распечатать или сохранить чистый PDF">
             <Printer size={13} />
             <span className="btn-text-desktop">Печать / PDF</span>
-            <span className="btn-text-mobile">PDF</span>
+            <span className="btn-text-mobile">Печать</span>
           </button>
         </div>
       </header>
@@ -2673,6 +2764,103 @@ export default function App() {
                 {authLoading ? 'Проверка...' : 'Войти в систему'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          МОДАЛЬНОЕ ОКНО: ПУБЛИКАЦИЯ СНИМКА ДЛЯ МИЛЫ (БЕЗ VPN)
+          ======================================================== */}
+      {isPublishModalOpen && (
+        <div 
+          className="modal-backdrop" 
+          onClick={() => setIsPublishModalOpen(false)}
+        >
+          <div className="modal-card publish-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-banner banner-fair">
+              <div className="modal-header-info">
+                <span className="modal-category-badge">
+                  <UploadCloud size={13} /> Синхронизация для заказчицы
+                </span>
+                <h3 className="modal-title-text" style={{ fontSize: '18px' }}>
+                  🚀 Опубликовать контент-план для Милы
+                </h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsPublishModalOpen(false)} title="Закрыть">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-form-body">
+              <div className="publish-info-box">
+                <p>
+                  <strong>Как это устроено:</strong> Все изменения, которые вы делаете в календаре (новые посты, перенос дат, статусы), сохранены в базе Supabase.
+                </p>
+                <p>
+                  Чтобы Мила на своём телефоне в России видела их <strong>без VPN</strong>, GitHub собирает статический снимок сайта.
+                </p>
+              </div>
+
+              <div className="publish-options-stack">
+                <div className="publish-option-card">
+                  <div className="publish-option-header">
+                    <h4>Вариант 1: Запуск в 1 клик на GitHub</h4>
+                    <span className="badge-free">Без токенов</span>
+                  </div>
+                  <p className="publish-option-desc">
+                    Откройте страницу действий в GitHub и нажмите синюю кнопку <strong>«Run workflow»</strong>:
+                  </p>
+                  <a 
+                    href="https://github.com/tima92127/vk-content-calendar/actions/workflows/deploy.yml" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="btn btn-save"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <ExternalLink size={13} />
+                    <span>Открыть GitHub Actions ↗</span>
+                  </a>
+                </div>
+
+                <div className="publish-option-card">
+                  <div className="publish-option-header">
+                    <h4>Вариант 2: Мгновенный запуск прямо из этого окна</h4>
+                    <span className="badge-fast">Прямой API</span>
+                  </div>
+                  <p className="publish-option-desc">
+                    Введите один раз ваш GitHub Personal Access Token (сохраняется только в вашем личном браузере), чтобы обновлять сайт по кнопке:
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                    <input 
+                      type="password" 
+                      placeholder="ghp_xxxxxxxxxxxx..." 
+                      className="craft-input" 
+                      value={githubToken} 
+                      onChange={(e) => setGithubToken(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="btn btn-save"
+                      onClick={triggerGitHubDeploy}
+                      disabled={isDispatching}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {isDispatching ? 'Запуск...' : 'Запустить 🚀'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="publish-cron-note">
+                  ⏰ <strong>Автоматическое обновление:</strong> Сервер GitHub также сам проверяет базу и пересобирает сайт каждые 6 часов, поэтому даже без ручного запуска изменения регулярно синхронизируются.
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: '16px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsPublishModalOpen(false)}>
+                  Закрыть
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

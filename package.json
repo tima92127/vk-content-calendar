@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "sync-data": "node scripts/sync-data.js",
+    "prebuild": "node scripts/sync-data.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "predeploy": "vite build",
+    "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
