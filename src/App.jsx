@@ -941,7 +941,7 @@ export default function App() {
         </div>
 
         <div className="header-actions">
-          {/* Индикатор статуса доступа (без упоминания конкретных имён) */}
+          {/* Индикатор статуса доступа */}
           <div className={`access-pill ${user ? 'mode-team' : 'mode-guest'}`}>
             {user ? (
               <>
@@ -961,6 +961,7 @@ export default function App() {
             <div className="connection-pill mode-offline" title="Сервер Supabase недоступен (без VPN). Отображаются сохранённые данные контент-плана.">
               <WifiOff size={12} />
               <span className="btn-text-desktop">Снимок без VPN</span>
+              <span className="btn-text-mobile">Офлайн</span>
             </div>
           )}
 
@@ -968,13 +969,13 @@ export default function App() {
           {user ? (
             <div className="team-controls">
               <button 
-                className="btn btn-publish" 
-                onClick={() => setIsPublishModalOpen(true)} 
-                title="Опубликовать актуальный снимок плана для Милы (без VPN)"
+                className="btn btn-save" 
+                onClick={() => openNewPostModal(selectedGridDate)} 
+                title="Создать новую публикацию"
               >
-                <UploadCloud size={13} />
-                <span className="btn-text-desktop">Опубликовать для Милы 🚀</span>
-                <span className="btn-text-mobile">Обновить 🚀</span>
+                <Plus size={14} />
+                <span className="btn-text-desktop">Публикация</span>
+                <span className="btn-text-mobile">Пост</span>
               </button>
 
               <button 
@@ -983,18 +984,18 @@ export default function App() {
                 title="Добавить условную дату, праздник или маркет (эмодзи 🍎, 🎪)"
               >
                 <Sparkles size={13} />
-                <span className="btn-text-desktop">+ Дата / Веха</span>
-                <span className="btn-text-mobile">+ Дата</span>
+                <span className="btn-text-desktop">Дата / Веха</span>
+                <span className="btn-text-mobile">Дата</span>
               </button>
 
               <button 
-                className="btn btn-save" 
-                onClick={() => openNewPostModal(selectedGridDate)} 
-                title="Создать новую публикацию"
+                className="btn btn-publish" 
+                onClick={() => setIsPublishModalOpen(true)} 
+                title="Опубликовать актуальный снимок плана для Милы (без VPN)"
               >
-                <Plus size={13} />
-                <span className="btn-text-desktop">+ Публикация</span>
-                <span className="btn-text-mobile">+ Пост</span>
+                <UploadCloud size={13} />
+                <span className="btn-text-desktop">Опубликовать 🚀</span>
+                <span className="btn-text-mobile">Обновить 🚀</span>
               </button>
 
               <div 
@@ -1007,10 +1008,6 @@ export default function App() {
                   <div className="switch-thumb" />
                 </div>
               </div>
-
-              <button className="btn btn-outline" onClick={handleLogout} title="Выйти из режима редактора">
-                Выйти
-              </button>
             </div>
           ) : (
             <button className="btn btn-login" onClick={() => setIsAuthModalOpen(true)}>
@@ -1020,24 +1017,31 @@ export default function App() {
             </button>
           )}
 
-          {/* Прямое скачивание готового PDF (без VPN) */}
-          <a 
-            href="./calendar_october_2026.pdf" 
-            download="Календарь_Октябрь_2026_Гостинцев_Двор_Чайная_Любовь.pdf" 
-            className="btn btn-download-pdf" 
-            title="Скачать готовый альбомный PDF-календарь прямо сейчас"
-          >
-            <FileDown size={13} />
-            <span className="btn-text-desktop">Скачать PDF</span>
-            <span className="btn-text-mobile">PDF</span>
-          </a>
+          {/* Инструменты экспорта и завершения сессии */}
+          <div className="header-export-group">
+            <a 
+              href="./calendar_october_2026.pdf" 
+              download="Календарь_Октябрь_2026_Гостинцев_Двор_Чайная_Любовь.pdf" 
+              className="btn btn-download-pdf" 
+              title="Скачать готовый альбомный PDF-календарь прямо сейчас"
+            >
+              <FileDown size={13} />
+              <span className="btn-text-desktop">Скачать PDF</span>
+              <span className="btn-text-mobile">PDF</span>
+            </a>
 
-          {/* Печать / PDF */}
-          <button className="btn btn-print" onClick={handlePrint} title="Распечатать или сохранить чистый PDF">
-            <Printer size={13} />
-            <span className="btn-text-desktop">Печать / PDF</span>
-            <span className="btn-text-mobile">Печать</span>
-          </button>
+            <button className="btn btn-print" onClick={handlePrint} title="Распечатать или сохранить чистый PDF через браузер">
+              <Printer size={13} />
+              <span className="btn-text-desktop">Печать</span>
+              <span className="btn-text-mobile">Печать</span>
+            </button>
+
+            {user && (
+              <button className="btn btn-outline" onClick={handleLogout} title="Выйти из режима редактора">
+                Выйти
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
