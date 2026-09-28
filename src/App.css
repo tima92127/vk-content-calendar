@@ -1020,6 +1020,9 @@ html, body {
   cursor: grab;
   display: flex;
   align-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* ====================================================================
@@ -1809,6 +1812,149 @@ html, body {
 .btn-compact {
   padding: 4px 8px !important;
   font-size: 11px !important;
+}
+
+/* ====================================================================
+   МОДАЛЬНОЕ ОКНО: БЫСТРЫЙ ПЕРЕНОС ДАТЫ
+   ==================================================================== */
+.reschedule-modal-card {
+  max-width: 440px;
+}
+
+.banner-reschedule {
+  border-top-color: var(--tea-amber) !important;
+}
+
+.reschedule-current-badge {
+  background: #faf8f5;
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.reschedule-quick-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.quick-pill {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-cream);
+  background: #faf8f5;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-pill:hover {
+  border-color: var(--pine-deep);
+  background: #ffffff;
+  color: var(--pine-deep);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* ====================================================================
+   ПЛАВАЮЩИЙ ИНДИКАТОР TOUCH DRAG & DROP
+   ==================================================================== */
+.touch-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.ghost-badge {
+  background: rgba(35, 62, 47, 0.95);
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  max-width: 270px;
+}
+
+.ghost-title {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghost-target {
+  color: #ffde70;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ghost-hint {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 10.5px;
+}
+
+.post-reschedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fbf5ea;
+  color: var(--tea-amber);
+  border: 1px solid #ebd8b6;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.post-reschedule-btn:hover {
+  background: var(--tea-amber);
+  color: #ffffff;
+  border-color: var(--tea-amber);
+}
+
+.mobile-drag-grip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--pine-soft);
+  color: var(--pine-deep);
+  border: 1px dashed var(--pine-deep);
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  margin-left: auto;
+  transition: all 0.15s ease;
+}
+
+.mobile-drag-grip:active {
+  cursor: grabbing;
+  background: var(--pine-deep);
+  color: #ffffff;
+}
+
+.drag-hint-text {
+  font-size: 10.5px;
 }
 
 /* ====================================================================

@@ -22,7 +22,8 @@ import {
   LayoutGrid,
   Smartphone,
   Share2,
-  Sparkles
+  Sparkles,
+  ArrowRightLeft
 } from 'lucide-react';
 
 // Фирменные векторные иконки брендов
@@ -108,6 +109,17 @@ export default function App() {
   const authBackdropMouseDownRef = useRef(false);
   const editBackdropMouseDownRef = useRef(false);
   const milestoneBackdropMouseDownRef = useRef(false);
+  const rescheduleBackdropMouseDownRef = useRef(false);
+
+  // Touch Drag & Drop для мобильных устройств
+  const [touchDraggingPost, setTouchDraggingPost] = useState(null);
+  const [touchGhostPos, setTouchGhostPos] = useState({ x: 0, y: 0 });
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
+  const isTouchDraggingRef = useRef(false);
+
+  // Быстрый перенос даты публикации в 1 клик для смартфонов
+  const [reschedulePost, setReschedulePost] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState('2026-10-01');
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -203,7 +215,35 @@ export default function App() {
     showToast('Вы перешли в режим просмотра');
   };
 
-  // DRAG AND DROP
+  // УНИВЕРСАЛЬНЫЙ ПЕРЕНОС ПУБЛИКАЦИИ НА НОВУЮ ДАТУ (СИНХРОНИЗАЦИЯ С SUPABASE)
+  const movePostToDate = async (postId, targetDateStr) => {
+    if (!postId || !targetDateStr) return;
+    const movingPost = posts.find(p => p.id === postId);
+    if (movingPost && movingPost.date === targetDateStr) return;
+
+    // Оптимистичное локальное обновление UI
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: targetDateStr } : p));
+
+    const dateFormatted = new Date(targetDateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    showToast(`📍 Публикация перенесена на ${dateFormatted}`);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(35); } catch (_) {}
+    }
+
+    // Запись в Supabase
+    const { error } = await supabase
+      .from('posts')
+      .update({ date: targetDateStr, updated_at: new Date().toISOString() })
+      .eq('id', postId);
+
+    if (error) {
+      console.error('Ошибка сохранения переноса:', error);
+      fetchPosts();
+      showToast('⚠️ Ошибка сохранения переноса');
+    }
+  };
+
+  // DRAG AND DROP (МЫШЬ / ДЕСКТОП)
   const handleDragStart = (e, post) => {
     if (!editMode) return;
     e.dataTransfer.setData('text/plain', post.id);
@@ -226,29 +266,81 @@ export default function App() {
     const postId = e.dataTransfer.getData('text/plain') || draggedPostId;
     setDragOverDate(null);
     setDraggedPostId(null);
-
-    if (!postId || !targetDateStr) return;
-
-    const movingPost = posts.find(p => p.id === postId);
-    if (movingPost && movingPost.date === targetDateStr) return;
-
-    // Локальное обновление
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: targetDateStr } : p));
-
-    const dateFormatted = new Date(targetDateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-    showToast(`📍 Публикация перенесена на ${dateFormatted}`);
-
-    // Запись в Supabase
-    const { error } = await supabase
-      .from('posts')
-      .update({ date: targetDateStr, updated_at: new Date().toISOString() })
-      .eq('id', postId);
-
-    if (error) {
-      console.error('Ошибка сохранения:', error);
-      fetchPosts();
-      showToast('⚠️ Ошибка сохранения');
+    if (postId) {
+      await movePostToDate(postId, targetDateStr);
     }
+  };
+
+  // TOUCH DRAG & DROP (ТАЧСКРИН / СМАРТФОНЫ И ПЛАНШЕТЫ)
+  const handleTouchStart = (e, post) => {
+    if (!editMode) return;
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    isTouchDraggingRef.current = false;
+    setTouchDraggingPost(post);
+    setTouchGhostPos({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchDraggingPost || !editMode) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+
+    // Активируем перетаскивание только если смещение больше 8px (защита от случайного скролла)
+    if (!isTouchDraggingRef.current && (dx > 8 || dy > 8)) {
+      isTouchDraggingRef.current = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(25); } catch (_) {}
+      }
+    }
+
+    if (isTouchDraggingRef.current) {
+      setTouchGhostPos({ x: touch.clientX, y: touch.clientY });
+
+      // Находим ячейку дня календаря под пальцем
+      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetDayElem = elem?.closest('[data-date]');
+      const targetDate = targetDayElem?.getAttribute('data-date') || null;
+      setDragOverDate(targetDate);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!touchDraggingPost) return;
+    const wasDragging = isTouchDraggingRef.current;
+    const postToMove = touchDraggingPost;
+    const touch = e.changedTouches ? e.changedTouches[0] : null;
+
+    let targetDate = null;
+    if (touch) {
+      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetDayElem = elem?.closest('[data-date]');
+      targetDate = targetDayElem?.getAttribute('data-date') || null;
+    }
+
+    setTouchDraggingPost(null);
+    isTouchDraggingRef.current = false;
+    setDragOverDate(null);
+
+    if (wasDragging && targetDate && postToMove) {
+      movePostToDate(postToMove.id, targetDate);
+    }
+  };
+
+  // БЫСТРЫЙ ПЕРЕНОС ДАТЫ В 1 КЛИК ДЛЯ СМАРТФОНОВ
+  const openRescheduleModal = (post) => {
+    if (!editMode) return;
+    setReschedulePost(post);
+    setRescheduleDate(post.date || '2026-10-01');
+  };
+
+  const confirmReschedule = async (e) => {
+    e.preventDefault();
+    if (!reschedulePost || !rescheduleDate) return;
+    const postToMove = reschedulePost;
+    setReschedulePost(null);
+    await movePostToDate(postToMove.id, rescheduleDate);
   };
 
   // ОТКРЫТИЕ ПОСТА
@@ -788,6 +880,7 @@ export default function App() {
               return (
                 <div 
                   key={idx}
+                  data-date={slot.dateStr}
                   className={`day-card ${!slot.isCurrentMonth ? 'outside-month' : ''} ${isWeekend ? 'weekend-day' : ''} ${isToday ? 'is-today' : ''} ${isHovered ? 'drag-target-hover' : ''} ${slot.dateStr === selectedGridDate ? 'is-selected-day' : ''}`}
                   onClick={() => setSelectedGridDate(slot.dateStr)}
                   onDragOver={(e) => handleDragOver(e, slot.dateStr)}
@@ -909,7 +1002,13 @@ export default function App() {
                             )}
 
                             {editMode && (
-                              <span className="drag-handle" title="Перетащить на другой день">
+                              <span 
+                                className="drag-handle" 
+                                onTouchStart={(e) => handleTouchStart(e, post)}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                                title="Перетащить на другой день"
+                              >
                                 <GripVertical size={13} />
                               </span>
                             )}
@@ -1029,6 +1128,20 @@ export default function App() {
                         <span className={`status-badge-inline status-${post.status || 'planned'}`}>
                           {post.status === 'published' ? '✅ Опубликован' : (post.status === 'draft' ? '⏳ Черновик в ВК' : '📝 В плане')}
                         </span>
+
+                        {editMode && (
+                          <div 
+                            className="mobile-drag-grip" 
+                            onTouchStart={(e) => handleTouchStart(e, post)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onClick={(e) => e.stopPropagation()}
+                            title="Зажмите и перетащите на любой день календаря выше"
+                          >
+                            <GripVertical size={15} />
+                            <span className="drag-hint-text">Тяните на дату</span>
+                          </div>
+                        )}
                       </div>
 
                       <h5 className="post-card-title">{post.title}</h5>
@@ -1038,6 +1151,18 @@ export default function App() {
                       )}
 
                       <div className="post-card-actions">
+                        {editMode && (
+                          <button 
+                            type="button"
+                            className="post-reschedule-btn" 
+                            onClick={(e) => { e.stopPropagation(); openRescheduleModal(post); }}
+                            title="Быстро перенести публикацию на другую дату"
+                          >
+                            <ArrowRightLeft size={12} />
+                            <span>Перенести</span>
+                          </button>
+                        )}
+
                         {hasVkLink ? (
                           <a 
                             href={post.vk_draft_url}
@@ -1219,6 +1344,18 @@ export default function App() {
                           )}
 
                           <div className="feed-post-actions">
+                            {editMode && (
+                              <button 
+                                type="button"
+                                className="post-reschedule-btn"
+                                onClick={(e) => { e.stopPropagation(); openRescheduleModal(post); }}
+                                title="Быстро перенести публикацию на другую дату"
+                              >
+                                <ArrowRightLeft size={13} />
+                                <span>Перенести дату</span>
+                              </button>
+                            )}
+
                             {hasVkLink ? (
                               <a 
                                 href={post.vk_draft_url}
@@ -1264,6 +1401,26 @@ export default function App() {
           <button className="pwa-tip-close" onClick={() => setShowPwaTip(false)} title="Скрыть подсказку">
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {/* ПЛАВАЮЩИЙ ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (ДЛЯ ТАЧСКРИНА И СМАРТФОНОВ) */}
+      {touchDraggingPost && (
+        <div 
+          className="touch-drag-ghost"
+          style={{
+            transform: `translate3d(${touchGhostPos.x - 110}px, ${touchGhostPos.y - 65}px, 0)`
+          }}
+        >
+          <div className="ghost-badge">
+            <span className="ghost-icon">📍</span>
+            <span className="ghost-title">{touchDraggingPost.title}</span>
+            {dragOverDate ? (
+              <span className="ghost-target">➔ {new Date(dragOverDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span>
+            ) : (
+              <span className="ghost-hint">Тяните на день в календаре</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -1721,6 +1878,118 @@ export default function App() {
                     </button>
                   )}
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          МОДАЛЬНОЕ ОКНО: БЫСТРЫЙ ПЕРЕНОС ДАТЫ ПУБЛИКАЦИИ
+          ======================================================== */}
+      {reschedulePost && (
+        <div 
+          className="modal-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) rescheduleBackdropMouseDownRef.current = true;
+            else rescheduleBackdropMouseDownRef.current = false;
+          }}
+          onMouseUp={(e) => {
+            if (rescheduleBackdropMouseDownRef.current && e.target === e.currentTarget) {
+              setReschedulePost(null);
+            }
+            rescheduleBackdropMouseDownRef.current = false;
+          }}
+        >
+          <div className="modal-card reschedule-modal-card">
+            <div className={`modal-header-banner ${reschedulePost.project === 'fair' ? 'banner-fair' : 'banner-tea'}`}>
+              <div className="modal-header-info">
+                <span className="modal-category-badge">
+                  <ArrowRightLeft size={13} /> Быстрый перенос даты
+                </span>
+                <h3 className="modal-title-text" style={{ fontSize: '18px' }}>
+                  {reschedulePost.title}
+                </h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setReschedulePost(null)} title="Закрыть">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={confirmReschedule} className="modal-form-body">
+              <div className="reschedule-current-badge">
+                <span>Текущая дата: <strong>{new Date(reschedulePost.date).toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}</strong></span>
+              </div>
+
+              <div className="form-field">
+                <label className="field-label">📅 Новая дата публикации</label>
+                <input 
+                  type="date"
+                  className="craft-input font-bold"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Быстрые кнопки сдвига */}
+              <div className="form-field">
+                <label className="field-label">Быстрый выбор:</label>
+                <div className="reschedule-quick-pills">
+                  <button 
+                    type="button" 
+                    className="quick-pill"
+                    onClick={() => {
+                      const d = new Date(reschedulePost.date);
+                      d.setDate(d.getDate() + 1);
+                      setRescheduleDate(d.toISOString().slice(0, 10));
+                    }}
+                  >
+                    +1 день
+                  </button>
+                  <button 
+                    type="button" 
+                    className="quick-pill"
+                    onClick={() => {
+                      const d = new Date(reschedulePost.date);
+                      d.setDate(d.getDate() + 2);
+                      setRescheduleDate(d.toISOString().slice(0, 10));
+                    }}
+                  >
+                    +2 дня
+                  </button>
+                  <button 
+                    type="button" 
+                    className="quick-pill"
+                    onClick={() => {
+                      const d = new Date(reschedulePost.date);
+                      d.setDate(d.getDate() + 3);
+                      setRescheduleDate(d.toISOString().slice(0, 10));
+                    }}
+                  >
+                    +3 дня
+                  </button>
+                  <button 
+                    type="button" 
+                    className="quick-pill"
+                    onClick={() => {
+                      const d = new Date(reschedulePost.date);
+                      d.setDate(d.getDate() + 7);
+                      setRescheduleDate(d.toISOString().slice(0, 10));
+                    }}
+                  >
+                    +7 дней
+                  </button>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setReschedulePost(null)}>
+                  Отмена
+                </button>
+                <button type="submit" className="btn btn-save">
+                  <CheckCircle2 size={15} /> Перенести публикацию
+                </button>
               </div>
             </form>
           </div>
