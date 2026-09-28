@@ -21,7 +21,8 @@ import {
   List,
   LayoutGrid,
   Smartphone,
-  Share2
+  Share2,
+  Sparkles
 } from 'lucide-react';
 
 // Фирменные векторные иконки брендов
@@ -75,7 +76,7 @@ export default function App() {
   const [draggedPostId, setDraggedPostId] = useState(null);
   const [dragOverDate, setDragOverDate] = useState(null);
 
-  // Модальные окна
+  // Модальные окна постов
   const [selectedPost, setSelectedPost] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewPost, setIsNewPost] = useState(false);
@@ -91,9 +92,22 @@ export default function App() {
     cta: ''
   });
 
+  // Модальные окна условных дат и вех (ярмарки, праздники 🍎/🎪)
+  const [selectedMilestone, setSelectedMilestone] = useState(null);
+  const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
+  const [isNewMilestone, setIsNewMilestone] = useState(false);
+  const [milestoneForm, setMilestoneForm] = useState({
+    summary: '',
+    date_start: '2026-10-01',
+    date_end: '2026-10-01',
+    color: '#c65328',
+    description: ''
+  });
+
   // Защита модалок от случайного закрытия при выделении текста мышью
   const authBackdropMouseDownRef = useRef(false);
   const editBackdropMouseDownRef = useRef(false);
+  const milestoneBackdropMouseDownRef = useRef(false);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -142,11 +156,14 @@ export default function App() {
       else setEditMode(false);
     });
 
-    // Realtime подписка
+    // Realtime подписка на посты и вехи
     const channel = supabase
-      .channel('public:posts')
+      .channel('public:calendar')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
         fetchPosts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'milestones' }, () => {
+        fetchMilestones();
       })
       .subscribe();
 
@@ -311,7 +328,7 @@ export default function App() {
     setIsEditModalOpen(false);
   };
 
-  // УДАЛЕНИЕ
+  // УДАЛЕНИЕ ПОСТА
   const deletePost = async () => {
     if (!editMode || !selectedPost) return;
     if (!window.confirm(`Удалить публикацию «${selectedPost.title}»?`)) return;
@@ -325,6 +342,94 @@ export default function App() {
       showToast('⚠️ Ошибка удаления');
     } else {
       showToast('🗑️ Публикация удалена');
+    }
+  };
+
+  // ВЕХИ И УСЛОВНЫЕ ДАТЫ (ПРАЗДНИКИ, ЯРМАРКИ, СОБЫТИЯ 🍎/🎪)
+  const openMilestoneModal = (milestone) => {
+    setSelectedMilestone(milestone);
+    setIsNewMilestone(false);
+    setMilestoneForm({
+      summary: milestone.summary || '',
+      date_start: milestone.date_start || '2026-10-01',
+      date_end: milestone.date_end || milestone.date_start || '2026-10-01',
+      color: milestone.color || '#c65328',
+      description: milestone.description || ''
+    });
+    setIsMilestoneModalOpen(true);
+  };
+
+  const openNewMilestoneModal = (dayDateStr) => {
+    if (!editMode) return;
+    const targetDate = dayDateStr || '2026-10-01';
+    setSelectedMilestone(null);
+    setIsNewMilestone(true);
+    setMilestoneForm({
+      summary: '🍎 Праздник / Важная дата',
+      date_start: targetDate,
+      date_end: targetDate,
+      color: '#c65328',
+      description: ''
+    });
+    setIsMilestoneModalOpen(true);
+  };
+
+  const saveMilestoneChanges = async (e) => {
+    e.preventDefault();
+    if (!editMode) return;
+
+    if (!milestoneForm.summary.trim()) {
+      showToast('⚠️ Укажите название события');
+      return;
+    }
+
+    const payload = {
+      summary: milestoneForm.summary.trim(),
+      date_start: milestoneForm.date_start,
+      date_end: milestoneForm.date_end || milestoneForm.date_start,
+      color: milestoneForm.color || '#c65328',
+      description: milestoneForm.description?.trim() || null
+    };
+
+    if (isNewMilestone) {
+      const { data, error } = await supabase.from('milestones').insert([payload]).select();
+      if (error) {
+        showToast('⚠️ Ошибка создания: ' + error.message);
+      } else {
+        showToast('✨ Событие успешно добавлено');
+        if (data && data[0]) {
+          setMilestones(prev => [...prev, data[0]]);
+        }
+        fetchMilestones();
+      }
+    } else if (selectedMilestone) {
+      setMilestones(prev => prev.map(m => m.id === selectedMilestone.id ? { ...m, ...payload } : m));
+      const { error } = await supabase.from('milestones').update(payload).eq('id', selectedMilestone.id);
+      if (error) {
+        fetchMilestones();
+        showToast('⚠️ Ошибка сохранения: ' + error.message);
+      } else {
+        showToast('💾 Событие обновлено');
+      }
+    }
+
+    setIsMilestoneModalOpen(false);
+  };
+
+  const deleteMilestone = async () => {
+    if (!editMode || !selectedMilestone) return;
+    if (!window.confirm(`Удалить событие «${selectedMilestone.summary}»?`)) return;
+
+    const idToDelete = selectedMilestone.id;
+    setMilestones(prev => prev.filter(m => m.id !== idToDelete));
+    setIsMilestoneModalOpen(false);
+
+    const { error } = await supabase.from('milestones').delete().eq('id', idToDelete);
+    if (error) {
+      fetchMilestones();
+      showToast('⚠️ Ошибка удаления: ' + error.message);
+    } else {
+      showToast('🗑️ Событие удалено');
     }
   };
 
@@ -488,6 +593,26 @@ export default function App() {
           {/* Управление для команды */}
           {user ? (
             <div className="team-controls">
+              <button 
+                className="btn btn-milestone-action" 
+                onClick={() => openNewMilestoneModal(selectedGridDate)} 
+                title="Добавить условную дату, праздник или маркет (эмодзи 🍎, 🎪)"
+              >
+                <Sparkles size={13} />
+                <span className="btn-text-desktop">+ Дата / Веха</span>
+                <span className="btn-text-mobile">+ Дата</span>
+              </button>
+
+              <button 
+                className="btn btn-save" 
+                onClick={() => openNewPostModal(selectedGridDate)} 
+                title="Создать новую публикацию"
+              >
+                <Plus size={13} />
+                <span className="btn-text-desktop">+ Публикация</span>
+                <span className="btn-text-mobile">+ Пост</span>
+              </button>
+
               <div 
                 className={`toggle-dnd ${editMode ? 'active' : ''}`}
                 onClick={() => setEditMode(!editMode)}
@@ -689,17 +814,32 @@ export default function App() {
 
                   {/* Полоска праздника/вехи отдельной строкой */}
                   {dayMilestones.length > 0 && (
-                    <div className="day-milestone-bar" title={dayMilestones[0].summary}>
-                      {dayMilestones[0].category === 'fair' ? (
-                        <span className="ribbon-fair">🎪 <span className="ribbon-text">{dayMilestones[0].summary}</span></span>
-                      ) : (
-                        <span className="ribbon-holiday">🍎 <span className="ribbon-text">{dayMilestones[0].summary}</span></span>
-                      )}
+                    <div className="day-milestone-bar">
+                      {dayMilestones.map((m) => (
+                        <div 
+                          key={m.id}
+                          className="milestone-ribbon-item" 
+                          style={{ backgroundColor: m.color || '#c65328' }}
+                          onClick={(e) => { e.stopPropagation(); openMilestoneModal(m); }}
+                          title={`${m.summary} (нажмите для подробностей)`}
+                        >
+                          <span className="ribbon-text">{m.summary}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
                   {/* Мобильные компактные индикаторы для плитки */}
                   <div className="day-mobile-indicators">
+                    {dayMilestones.map((m, mIdx) => (
+                      <span 
+                        key={m.id || `m-${mIdx}`} 
+                        className="mobile-milestone-dot" 
+                        title={m.summary}
+                      >
+                        {m.summary?.includes('🎪') ? '🎪' : (m.summary?.includes('🎂') ? '🎂' : (m.summary?.includes('📦') ? '📦' : '🍎'))}
+                      </span>
+                    ))}
                     {dayPosts.map((post, pIdx) => {
                       const isFair = post.project === 'fair';
                       return (
@@ -805,26 +945,62 @@ export default function App() {
               </div>
 
               {editMode && (
-                <button 
-                  className="btn btn-outline"
-                  style={{ padding: '5px 10px', fontSize: '11px' }}
-                  onClick={() => openNewPostModal(selectedGridDate)}
-                >
-                  <Plus size={13} /> Добавить
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button 
+                    className="btn btn-outline"
+                    style={{ padding: '5px 8px', fontSize: '11px' }}
+                    onClick={() => openNewMilestoneModal(selectedGridDate)}
+                    title="Добавить условную дату на этот день"
+                  >
+                    <Sparkles size={11} /> + Дата
+                  </button>
+                  <button 
+                    className="btn btn-outline"
+                    style={{ padding: '5px 8px', fontSize: '11px' }}
+                    onClick={() => openNewPostModal(selectedGridDate)}
+                    title="Добавить публикацию на этот день"
+                  >
+                    <Plus size={11} /> + Пост
+                  </button>
+                </div>
               )}
             </div>
 
             {/* Праздник или маркет дня */}
             {selectedDayMilestones.length > 0 && (
-              <div className="selected-day-milestone-card">
-                <span className="milestone-badge">
-                  {selectedDayMilestones[0].category === 'fair' ? '🎪 ' : '🍎 '}
-                  {selectedDayMilestones[0].summary}
-                </span>
-                {selectedDayMilestones[0].description && (
-                  <p className="milestone-desc">{selectedDayMilestones[0].description}</p>
-                )}
+              <div className="selected-day-milestones-container">
+                {selectedDayMilestones.map(m => (
+                  <div 
+                    key={m.id} 
+                    className="selected-day-milestone-card"
+                    onClick={() => openMilestoneModal(m)}
+                    title="Нажмите для просмотра или редактирования"
+                  >
+                    <div className="milestone-badge-row">
+                      <span 
+                        className="milestone-badge"
+                        style={{ backgroundColor: m.color || '#c65328' }}
+                      >
+                        {m.summary}
+                      </span>
+                      {m.date_start !== m.date_end ? (
+                        <span className="milestone-range-tag">
+                          {new Date(m.date_start).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} — {new Date(m.date_end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                        </span>
+                      ) : (
+                        <span className="milestone-range-tag">
+                          {new Date(m.date_start).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                      <span className="milestone-view-action">
+                        {editMode ? 'Редактировать ✏️' : 'Подробнее ↗'}
+                      </span>
+                    </div>
+                    {m.description && (
+                      <p className="milestone-desc">{m.description}</p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -971,20 +1147,44 @@ export default function App() {
                     </div>
 
                     {dayMilestones.length > 0 && (
-                      <span className="feed-milestone-tag">
-                        {dayMilestones[0].category === 'fair' ? '🎪 ' : '🍎 '}
-                        {dayMilestones[0].summary}
-                      </span>
+                      <div className="feed-milestones-list">
+                        {dayMilestones.map(m => (
+                          <span 
+                            key={m.id}
+                            className="feed-milestone-tag clickable"
+                            style={{ 
+                              borderColor: m.color || '#c65328', 
+                              color: m.color || '#c65328',
+                              backgroundColor: `${m.color || '#c65328'}15`
+                            }}
+                            onClick={() => openMilestoneModal(m)}
+                            title="Нажмите для просмотра подробностей или редактирования"
+                          >
+                            {m.summary}
+                          </span>
+                        ))}
+                      </div>
                     )}
 
                     {editMode && (
-                      <button 
-                        className="btn btn-outline" 
-                        style={{ padding: '4px 8px', fontSize: '11px', marginLeft: 'auto' }}
-                        onClick={() => openNewPostModal(dateStr)}
-                      >
-                        <Plus size={12} /> Добавить пост
-                      </button>
+                      <div className="feed-header-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                          onClick={() => openNewMilestoneModal(dateStr)}
+                          title="Добавить условную дату на этот день"
+                        >
+                          <Sparkles size={11} /> + Дата
+                        </button>
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                          onClick={() => openNewPostModal(dateStr)}
+                          title="Добавить публикацию на этот день"
+                        >
+                          <Plus size={11} /> + Пост
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1270,6 +1470,254 @@ export default function App() {
                   {editMode && (
                     <button type="submit" className="btn btn-save">
                       <CheckCircle2 size={15} /> Сохранить в базу
+                    </button>
+                  )}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          МОДАЛЬНОЕ ОКНО: ДЕТАЛИ И РЕДАКТИРОВАНИЕ СОБЫТИЯ / ВЕХИ
+          ======================================================== */}
+      {isMilestoneModalOpen && (
+        <div 
+          className="modal-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) milestoneBackdropMouseDownRef.current = true;
+            else milestoneBackdropMouseDownRef.current = false;
+          }}
+          onMouseUp={(e) => {
+            if (milestoneBackdropMouseDownRef.current && e.target === e.currentTarget) {
+              setIsMilestoneModalOpen(false);
+            }
+            milestoneBackdropMouseDownRef.current = false;
+          }}
+        >
+          <div className="modal-card milestone-modal-card">
+            <div 
+              className="modal-header-banner"
+              style={{ borderTopColor: milestoneForm.color || '#c65328' }}
+            >
+              <div className="modal-header-info">
+                <span className="modal-category-badge" style={{ color: milestoneForm.color || '#c65328' }}>
+                  📌 Знаменательная дата / Событие
+                </span>
+                <h3 className="modal-title-text">
+                  {isNewMilestone ? 'Новая условная дата / веха' : (editMode ? 'Редактирование события' : milestoneForm.summary)}
+                </h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsMilestoneModalOpen(false)} title="Закрыть">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={saveMilestoneChanges} className="modal-form-body">
+              {editMode && (
+                <div className="form-field">
+                  <label className="field-label">Быстрый выбор темы и иконки:</label>
+                  <div className="milestone-preset-chips">
+                    <button 
+                      type="button" 
+                      className="preset-chip"
+                      onClick={() => setMilestoneForm(prev => {
+                        const clean = prev.summary.replace(/^[^\wа-яА-ЯёЁ]+/, '').trim();
+                        return {
+                          ...prev, 
+                          color: '#c65328', 
+                          summary: clean ? `🍎 ${clean}` : '🍎 Праздник / Важная дата'
+                        };
+                      })}
+                    >
+                      🍎 Праздник
+                    </button>
+                    <button 
+                      type="button" 
+                      className="preset-chip"
+                      onClick={() => setMilestoneForm(prev => {
+                        const clean = prev.summary.replace(/^[^\wа-яА-ЯёЁ]+/, '').trim();
+                        return {
+                          ...prev, 
+                          color: '#233e2f', 
+                          summary: clean ? `🎪 ${clean}` : '🎪 Ярмарка мастеров'
+                        };
+                      })}
+                    >
+                      🎪 Ярмарка
+                    </button>
+                    <button 
+                      type="button" 
+                      className="preset-chip"
+                      onClick={() => setMilestoneForm(prev => {
+                        const clean = prev.summary.replace(/^[^\wа-яА-ЯёЁ]+/, '').trim();
+                        return {
+                          ...prev, 
+                          color: '#c88924', 
+                          summary: clean ? `🎂 ${clean}` : '🎂 Юбилей / Годовщина'
+                        };
+                      })}
+                    >
+                      🎂 Юбилей
+                    </button>
+                    <button 
+                      type="button" 
+                      className="preset-chip"
+                      onClick={() => setMilestoneForm(prev => {
+                        const clean = prev.summary.replace(/^[^\wа-яА-ЯёЁ]+/, '').trim();
+                        return {
+                          ...prev, 
+                          color: '#2563eb', 
+                          summary: clean ? `📦 ${clean}` : '📦 Поставка / Дедлайн'
+                        };
+                      })}
+                    >
+                      📦 Поставка
+                    </button>
+                    <button 
+                      type="button" 
+                      className="preset-chip"
+                      onClick={() => setMilestoneForm(prev => {
+                        const clean = prev.summary.replace(/^[^\wа-яА-ЯёЁ]+/, '').trim();
+                        return {
+                          ...prev, 
+                          color: '#545b3e', 
+                          summary: clean ? `🌿 ${clean}` : '🌿 Травы'
+                        };
+                      })}
+                    >
+                      🌿 Травы
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Название события */}
+              <div className="form-field">
+                <label className="field-label">Название события (с эмодзи)</label>
+                {editMode ? (
+                  <input 
+                    type="text" 
+                    className="craft-input font-bold" 
+                    value={milestoneForm.summary} 
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, summary: e.target.value })}
+                    placeholder="Например: 🍎 День урожая или 🎪 Осенний маркет"
+                    required
+                  />
+                ) : (
+                  <div className="readonly-value" style={{ fontSize: '15px', fontWeight: 'bold' }}>
+                    {milestoneForm.summary}
+                  </div>
+                )}
+              </div>
+
+              {/* Диапазон дат */}
+              <div className="form-row-2">
+                <div className="form-field">
+                  <label className="field-label">Дата начала</label>
+                  {editMode ? (
+                    <input 
+                      type="date" 
+                      className="craft-input" 
+                      value={milestoneForm.date_start} 
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        setMilestoneForm(prev => ({
+                          ...prev,
+                          date_start: newStart,
+                          date_end: prev.date_end < newStart ? newStart : prev.date_end
+                        }));
+                      }}
+                      required
+                    />
+                  ) : (
+                    <div className="readonly-value">
+                      📅 {new Date(milestoneForm.date_start).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">Дата окончания</label>
+                  {editMode ? (
+                    <input 
+                      type="date" 
+                      className="craft-input" 
+                      value={milestoneForm.date_end} 
+                      min={milestoneForm.date_start}
+                      onChange={(e) => setMilestoneForm({ ...milestoneForm, date_end: e.target.value })}
+                      required
+                    />
+                  ) : (
+                    <div className="readonly-value">
+                      {milestoneForm.date_end && milestoneForm.date_end !== milestoneForm.date_start 
+                        ? `📅 ${new Date(milestoneForm.date_end).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                        : 'Однодневное событие'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Цвет ленточки */}
+              {editMode && (
+                <div className="form-field">
+                  <label className="field-label">Цвет ленточки в календаре</label>
+                  <div className="color-picker-row">
+                    <input 
+                      type="color" 
+                      className="craft-color-input" 
+                      value={milestoneForm.color} 
+                      onChange={(e) => setMilestoneForm({ ...milestoneForm, color: e.target.value })}
+                    />
+                    <span className="color-hex-label">{milestoneForm.color}</span>
+                    <div className="color-swatches">
+                      {['#c65328', '#233e2f', '#c88924', '#2563eb', '#545b3e', '#7c3aed'].map(c => (
+                        <button 
+                          key={c}
+                          type="button" 
+                          className={`color-swatch-btn ${milestoneForm.color === c ? 'selected' : ''}`}
+                          style={{ backgroundColor: c }}
+                          onClick={() => setMilestoneForm({ ...milestoneForm, color: c })}
+                          title={c}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Описание / Подробности */}
+              <div className="form-field">
+                <label className="field-label">📝 Описание / Заметки к событию</label>
+                {editMode ? (
+                  <textarea 
+                    className="craft-textarea" 
+                    rows={3} 
+                    value={milestoneForm.description}
+                    onChange={(e) => setMilestoneForm({ ...milestoneForm, description: e.target.value })}
+                    placeholder="Например: локация проведения, время работы, примечания для постов и продаж..."
+                  />
+                ) : (
+                  <div className="readonly-box">{milestoneForm.description || 'Нет дополнительного описания.'}</div>
+                )}
+              </div>
+
+              <div className="modal-footer">
+                {editMode && !isNewMilestone && (
+                  <button type="button" className="btn-delete" onClick={deleteMilestone}>
+                    <Trash2 size={14} /> Удалить событие
+                  </button>
+                )}
+
+                <div className="footer-right-buttons">
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsMilestoneModalOpen(false)}>
+                    Закрыть
+                  </button>
+
+                  {editMode && (
+                    <button type="submit" className="btn btn-save">
+                      <CheckCircle2 size={15} /> {isNewMilestone ? 'Добавить в календарь' : 'Сохранить изменения'}
                     </button>
                   )}
                 </div>

@@ -843,10 +843,23 @@ html, body {
   width: 100%;
 }
 
-.milestone-pill, .ribbon-fair, .ribbon-holiday {
+.btn-milestone-action {
+  background: var(--terracotta-soft);
+  color: var(--terracotta);
+  border: 1px solid var(--terracotta-border);
+  font-weight: 700;
+}
+
+.btn-milestone-action:hover {
+  background: #f7dfd6;
+  border-color: var(--terracotta);
+  transform: translateY(-1px);
+}
+
+.milestone-pill, .ribbon-fair, .ribbon-holiday, .milestone-ribbon-item {
   font-size: 9.5px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 2.5px 6px;
   border-radius: 4px;
   line-height: 1.25;
   overflow: hidden;
@@ -856,6 +869,18 @@ html, body {
   min-width: 0;
   display: block;
   box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.milestone-ribbon-item {
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.milestone-ribbon-item:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
 }
 
 .milestone-pill.fair-event, .ribbon-fair {
@@ -1135,6 +1160,13 @@ html, body {
   text-transform: uppercase;
 }
 
+.feed-milestones-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .feed-milestone-tag {
   background: var(--terracotta-soft);
   color: var(--terracotta);
@@ -1143,6 +1175,20 @@ html, body {
   border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.feed-milestone-tag.clickable {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.feed-milestone-tag.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  filter: brightness(0.95);
 }
 
 .feed-cards-grid {
@@ -1679,6 +1725,93 @@ html, body {
 }
 
 /* ====================================================================
+   МОДАЛЬНОЕ ОКНО: СОБЫТИЯ И ВЕХИ
+   ==================================================================== */
+.milestone-modal-card {
+  max-width: 520px;
+}
+
+.milestone-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.preset-chip {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-cream);
+  background: #faf8f5;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-chip:hover {
+  border-color: var(--pine-deep);
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.craft-color-input {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-cream);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  cursor: pointer;
+  background: #ffffff;
+}
+
+.color-hex-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.color-swatches {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.color-swatch-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px #d1c8b8;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.color-swatch-btn:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch-btn.selected {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--pine-deep);
+}
+
+.btn-compact {
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+}
+
+/* ====================================================================
    МОДАЛЬНОЕ ОКНО: ВХОД ДЛЯ РЕДАКТОРОВ
    ==================================================================== */
 .auth-modal-card {
@@ -2113,11 +2246,21 @@ html, body {
   }
 
   .day-milestone-bar .ribbon-fair,
-  .day-milestone-bar .ribbon-holiday {
+  .day-milestone-bar .ribbon-holiday,
+  .day-milestone-bar .milestone-ribbon-item {
     padding: 0;
     font-size: 10px;
-    background: transparent;
+    background: transparent !important;
+    box-shadow: none;
     display: inline-block;
+  }
+
+  .mobile-milestone-dot {
+    font-size: 11px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* ========================================================
@@ -2195,23 +2338,61 @@ html, body {
     margin-top: 2px;
   }
 
-  .selected-day-milestone-card {
-    background: #fff8f0;
-    border-left: 3px solid var(--terracotta);
-    border-radius: 6px;
-    padding: 8px 10px;
+  .selected-day-milestones-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 12px;
-    font-size: 12px;
   }
 
-  .selected-day-milestone-card .milestone-badge {
+  .selected-day-milestone-card {
+    background: #faf8f5;
+    border: 1px solid var(--border-cream);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .selected-day-milestone-card:hover {
+    border-color: var(--pine-deep);
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  .milestone-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .milestone-badge {
+    font-size: 11px;
     font-weight: 700;
-    color: var(--terracotta);
-    display: block;
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .milestone-range-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .milestone-view-action {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pine-deep);
   }
 
   .selected-day-milestone-card .milestone-desc {
-    margin: 4px 0 0;
+    margin: 6px 0 0;
     font-size: 11.5px;
     color: var(--text-muted);
     line-height: 1.35;
