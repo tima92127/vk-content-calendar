@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import './App.css';
 import { 
@@ -185,6 +185,15 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 9, 1));
   // Выбранный день в сетке для мобильного инспектора
   const [selectedGridDate, setSelectedGridDate] = useState('2026-10-01');
+  
+  // Реальная текущая дата пользователя (YYYY-MM-DD) для динамического бейджа «Сегодня»
+  const todayDateStr = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, []);
   
   // Состояние авторизации
   const [user, setUser] = useState(null);
@@ -1344,7 +1353,7 @@ export default function App() {
           {/* Сетка ячеек дней */}
           <div className="calendar-days-grid">
             {calendarDays.map((slot, idx) => {
-              const isToday = slot.dateStr === '2026-09-28';
+              const isToday = slot.dateStr === todayDateStr;
               const isWeekend = slot.dayOfWeek === 5 || slot.dayOfWeek === 6;
               const isHovered = dragOverDate === slot.dateStr;
 
@@ -1880,7 +1889,7 @@ export default function App() {
               const dateObj = new Date(dateStr);
               const dayName = dateObj.toLocaleDateString('ru-RU', { weekday: 'long' });
               const dateFormatted = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-              const isToday = dateStr === '2026-09-28';
+              const isToday = dateStr === todayDateStr;
 
               const dayMilestones = milestones.filter(m => dateStr >= m.date_start && dateStr <= m.date_end);
 
