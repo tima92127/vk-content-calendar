@@ -27,7 +27,10 @@ import {
   Lightbulb,
   UploadCloud,
   FileDown,
-  WifiOff
+  WifiOff,
+  FileText,
+  Copy,
+  Download
 } from 'lucide-react';
 import fallbackData from './data/fallbackData.json';
 
@@ -159,6 +162,194 @@ const getStatusInfo = (statusKey) => {
   return POST_STATUSES[statusKey] || POST_STATUSES.planned;
 };
 
+// Функция форматирования контент-плана подневно в текстовом виде (.txt / .md)
+const formatDayByDayExport = ({
+  posts,
+  milestones = [],
+  period = 'all_october',
+  project = 'all',
+  format = 'txt',
+  includeDetails = true,
+  includeMilestones = true,
+  selectedDay = '2026-10-01'
+}) => {
+  let targetPosts = (posts || []).filter(p => p.date && p.status !== 'idea');
+
+  // Фильтр по сообществу
+  if (project !== 'all') {
+    targetPosts = targetPosts.filter(p => p.project === project);
+  }
+
+  // Фильтр по периоду
+  if (period === 'all_october') {
+    targetPosts = targetPosts.filter(p => p.date >= '2026-09-28' && p.date <= '2026-10-31');
+  } else if (period === 'w1') {
+    targetPosts = targetPosts.filter(p => p.date >= '2026-09-28' && p.date <= '2026-10-04');
+  } else if (period === 'w2') {
+    targetPosts = targetPosts.filter(p => p.date >= '2026-10-05' && p.date <= '2026-10-11');
+  } else if (period === 'w3') {
+    targetPosts = targetPosts.filter(p => p.date >= '2026-10-12' && p.date <= '2026-10-18');
+  } else if (period === 'w4') {
+    targetPosts = targetPosts.filter(p => p.date >= '2026-10-19' && p.date <= '2026-10-25');
+  } else if (period === 'w5') {
+    targetPosts = targetPosts.filter(p => p.date >= '2026-10-26' && p.date <= '2026-10-31');
+  } else if (period === 'selected_day') {
+    targetPosts = targetPosts.filter(p => p.date === selectedDay);
+  }
+
+  // Сортировка по дате и времени
+  targetPosts.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return (a.time || '10:00').localeCompare(b.time || '10:00');
+  });
+
+  // Группировка по датам
+  const datesMap = new Map();
+  for (const post of targetPosts) {
+    if (!datesMap.has(post.date)) datesMap.set(post.date, []);
+    datesMap.get(post.date).push(post);
+  }
+
+  if (period === 'selected_day' && !datesMap.has(selectedDay)) {
+    datesMap.set(selectedDay, []);
+  }
+
+  const sortedDates = Array.from(datesMap.keys()).sort();
+
+  const projectLabels = {
+    fair: '🎪 Гостинцев двор (Ярмарка)',
+    tea: '🌿 Чайная любовь (Чай & мёд)'
+  };
+
+  const periodLabels = {
+    all_october: 'Октябрь 2026 (все недели месяца)',
+    w1: '1 неделя (28.09 – 04.10)',
+    w2: '2 неделя (05.10 – 11.10)',
+    w3: '3 неделя (12.10 – 18.10)',
+    w4: '4 неделя (19.10 – 25.10)',
+    w5: '5 неделя (26.10 – 31.10)',
+    selected_day: `Выбранный день: ${selectedDay}`,
+    all_history: 'Все публикации базы данных'
+  };
+
+  const projectTitle = project === 'fair' 
+    ? '«Гостинцев двор»' 
+    : project === 'tea' 
+      ? '«Чайная любовь»' 
+      : '«Гостинцев двор» & «Чайная любовь»';
+
+  const lines = [];
+
+  if (format === 'md') {
+    lines.push(`# 📋 Контент-план публикаций: Октябрь 2026`);
+    lines.push(`> **Сообщества:** ${projectTitle}`);
+    lines.push(`> **Период:** ${periodLabels[period] || period}`);
+    lines.push(`> **Всего публикаций:** ${targetPosts.length}`);
+    lines.push('');
+
+    if (sortedDates.length === 0) {
+      lines.push('*За выбранный период публикаций не запланировано.*');
+      return lines.join('\n');
+    }
+
+    sortedDates.forEach(dStr => {
+      const dObj = new Date(dStr);
+      const dayOfWeek = dObj.toLocaleDateString('ru-RU', { weekday: 'long' });
+      const dayFormatted = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+      const dayTitle = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
+
+      lines.push('---');
+      lines.push(`## 📅 ${dayTitle}, ${dayFormatted}`);
+
+      if (includeMilestones) {
+        const dayM = (milestones || []).filter(m => dStr >= m.date_start && dStr <= m.date_end);
+        if (dayM.length > 0) {
+          lines.push(`> 🎪 **События и вехи:** ${dayM.map(m => m.summary).join(' • ')}`);
+        }
+      }
+
+      const dayPostsList = datesMap.get(dStr) || [];
+      if (dayPostsList.length === 0) {
+        lines.push('*Публикаций на этот день не запланировано.*');
+        lines.push('');
+        return;
+      }
+
+      dayPostsList.forEach((p, idx) => {
+        const timeStr = p.time ? `[${p.time}] ` : '';
+        const projName = projectLabels[p.project] || p.project;
+        const statusObj = POST_STATUSES[p.status] || { label: p.status };
+
+        lines.push(`### ${idx + 1}. ${timeStr}${projName} — \`${statusObj.label}\``);
+        lines.push(`**Тема:** ${p.title}`);
+
+        if (includeDetails) {
+          if (p.meaning) lines.push(`- **Суть / Смысл:** ${p.meaning}`);
+          if (p.visual) lines.push(`- **Визуал:** ${p.visual}`);
+          if (p.cta) lines.push(`- **Призыв (CTA):** ${p.cta}`);
+          if (p.vk_draft_url) lines.push(`- **Черновик ВК:** [Открыть черновик](${p.vk_draft_url})`);
+        }
+        lines.push('');
+      });
+    });
+  } else {
+    lines.push('================================================================');
+    lines.push('ПЛАН ПУБЛИКАЦИЙ: ОКТЯБРЬ 2026 (ПОДНЕВНОЙ ФОРМАТ)');
+    lines.push(`Сообщества: ${projectTitle}`);
+    lines.push(`Период: ${periodLabels[period] || period}`);
+    lines.push(`Всего публикаций: ${targetPosts.length}`);
+    lines.push('================================================================\n');
+
+    if (sortedDates.length === 0) {
+      lines.push('(За выбранный период публикаций не найдено)\n');
+      return lines.join('\n');
+    }
+
+    sortedDates.forEach(dStr => {
+      const dObj = new Date(dStr);
+      const dayOfWeek = dObj.toLocaleDateString('ru-RU', { weekday: 'long' });
+      const dayFormatted = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+      const dayTitle = dayOfWeek.toUpperCase();
+
+      lines.push('----------------------------------------------------------------');
+      lines.push(`📅 ${dayTitle}, ${dayFormatted}`);
+
+      if (includeMilestones) {
+        const dayM = (milestones || []).filter(m => dStr >= m.date_start && dStr <= m.date_end);
+        if (dayM.length > 0) {
+          lines.push(`🎪 СОБЫТИЯ / ВЕХИ: ${dayM.map(m => m.summary).join(' | ')}`);
+        }
+      }
+      lines.push('----------------------------------------------------------------');
+
+      const dayPostsList = datesMap.get(dStr) || [];
+      if (dayPostsList.length === 0) {
+        lines.push('(Публикаций на этот день не запланировано)\n');
+        return;
+      }
+
+      dayPostsList.forEach((p, idx) => {
+        const timeStr = p.time ? `[${p.time}] ` : '';
+        const projName = p.project === 'fair' ? 'Гостинцев двор (Ярмарка)' : 'Чайная любовь (Чай)';
+        const statusObj = POST_STATUSES[p.status] || { label: p.status };
+
+        lines.push(`\n${idx + 1}) ${timeStr}${projName} | Статус: ${statusObj.label}`);
+        lines.push(`   Тема: ${p.title}`);
+
+        if (includeDetails) {
+          if (p.meaning) lines.push(`   Смысл / Суть: ${p.meaning}`);
+          if (p.visual) lines.push(`   Визуал / Фото: ${p.visual}`);
+          if (p.cta) lines.push(`   Призыв (CTA): ${p.cta}`);
+          if (p.vk_draft_url) lines.push(`   Черновик ВК: ${p.vk_draft_url}`);
+        }
+      });
+      lines.push('');
+    });
+  }
+
+  return lines.join('\n');
+};
+
 export default function App() {
   const [posts, setPosts] = useState(() => fallbackData?.posts || []);
   const [milestones, setMilestones] = useState(() => fallbackData?.milestones || []);
@@ -166,6 +357,15 @@ export default function App() {
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [githubToken, setGithubToken] = useState(() => (typeof window !== 'undefined' ? (localStorage.getItem('gh_dispatch_token') || '') : ''));
   const [isDispatching, setIsDispatching] = useState(false);
+
+  // Выгрузка контент-плана подневно в текстовом виде
+  const [isTextExportModalOpen, setIsTextExportModalOpen] = useState(false);
+  const [textExportPeriod, setTextExportPeriod] = useState('all_october');
+  const [textExportProject, setTextExportProject] = useState('all');
+  const [textExportFormat, setTextExportFormat] = useState('txt');
+  const [textExportIncludeDetails, setTextExportIncludeDetails] = useState(true);
+  const [textExportIncludeMilestones, setTextExportIncludeMilestones] = useState(true);
+  const [isCopiedExportText, setIsCopiedExportText] = useState(false);
 
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,6 +455,42 @@ export default function App() {
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Буфер обмена и скачивание текстовых файлов
+  const copyTextToClipboard = async (text, toastText = '📋 Текст скопирован в буфер обмена!') => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      showToast(toastText);
+      return true;
+    } catch (err) {
+      showToast('⚠️ Ошибка копирования: ' + err.message);
+      return false;
+    }
+  };
+
+  const downloadTextFile = (content, filename) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`💾 Файл «${filename}» сохранён`);
   };
 
   // Загрузка постов с таймаутом для устойчивости без VPN
@@ -847,6 +1083,74 @@ export default function App() {
   const ideaPosts = posts.filter(p => !p.date || p.status === 'idea');
   const calendarPosts = posts.filter(p => p.date && p.status !== 'idea');
 
+  // Выгрузка в текст подневно: текущий сгенерированный текст и статистика
+  const currentExportText = useMemo(() => {
+    return formatDayByDayExport({
+      posts: calendarPosts,
+      milestones,
+      period: textExportPeriod,
+      project: textExportProject,
+      format: textExportFormat,
+      includeDetails: textExportIncludeDetails,
+      includeMilestones: textExportIncludeMilestones,
+      selectedDay: selectedGridDate
+    });
+  }, [calendarPosts, milestones, textExportPeriod, textExportProject, textExportFormat, textExportIncludeDetails, textExportIncludeMilestones, selectedGridDate]);
+
+  const currentExportStats = useMemo(() => {
+    let target = calendarPosts.filter(p => p.date && p.status !== 'idea');
+    if (textExportProject !== 'all') target = target.filter(p => p.project === textExportProject);
+    if (textExportPeriod === 'all_october') target = target.filter(p => p.date >= '2026-09-28' && p.date <= '2026-10-31');
+    else if (textExportPeriod === 'w1') target = target.filter(p => p.date >= '2026-09-28' && p.date <= '2026-10-04');
+    else if (textExportPeriod === 'w2') target = target.filter(p => p.date >= '2026-10-05' && p.date <= '2026-10-11');
+    else if (textExportPeriod === 'w3') target = target.filter(p => p.date >= '2026-10-12' && p.date <= '2026-10-18');
+    else if (textExportPeriod === 'w4') target = target.filter(p => p.date >= '2026-10-19' && p.date <= '2026-10-25');
+    else if (textExportPeriod === 'w5') target = target.filter(p => p.date >= '2026-10-26' && p.date <= '2026-10-31');
+    else if (textExportPeriod === 'selected_day') target = target.filter(p => p.date === selectedGridDate);
+    return { count: target.length };
+  }, [calendarPosts, textExportProject, textExportPeriod, selectedGridDate]);
+
+  // Копирование одного дня в 1 клик
+  const copySingleDayText = (dateStr) => {
+    const text = formatDayByDayExport({
+      posts: calendarPosts,
+      milestones,
+      period: 'selected_day',
+      selectedDay: dateStr,
+      project: 'all',
+      format: 'txt',
+      includeDetails: true,
+      includeMilestones: true
+    });
+    const dObj = new Date(dateStr);
+    const dateFormatted = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    copyTextToClipboard(text, `📋 План на ${dateFormatted} скопирован в буфер!`);
+  };
+
+  // Копирование отдельной публикации
+  const copySinglePostText = (post) => {
+    if (!post) return;
+    const projName = post.project === 'fair' ? '🎪 Гостинцев двор (Ярмарка)' : '🌿 Чайная любовь (Чай & мёд)';
+    const dFormatted = post.date 
+      ? new Date(post.date).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      : 'Без даты (Банк идей)';
+    const statusObj = POST_STATUSES[post.status] || { label: post.status };
+
+    const lines = [
+      `📅 Дата: ${dFormatted}`,
+      `⏰ Время: ${post.time || '10:00'}`,
+      `🏢 Сообщество: ${projName}`,
+      `📊 Статус: ${statusObj.label}`,
+      `📌 Тема: ${post.title || 'Без темы'}`,
+      post.meaning ? `💡 Смысл: ${post.meaning}` : null,
+      post.visual ? `🎨 Визуал: ${post.visual}` : null,
+      post.cta ? `🎯 Призыв (CTA): ${post.cta}` : null,
+      post.vk_draft_url ? `🔗 Черновик ВК: ${post.vk_draft_url}` : null
+    ].filter(Boolean);
+
+    copyTextToClipboard(lines.join('\n'), '📋 Текст публикации скопирован в буфер!');
+  };
+
   // Фильтрация идей для боковой колонки
   const filteredIdeas = ideaPosts.filter(p => {
     if (ideasFilter !== 'all' && p.project !== ideasFilter) return false;
@@ -1028,6 +1332,19 @@ export default function App() {
 
           {/* Инструменты экспорта и завершения сессии */}
           <div className="header-export-group">
+            <button 
+              className="btn btn-text-export" 
+              onClick={() => {
+                setTextExportPeriod(selectedWeek === 'all' ? 'all_october' : selectedWeek);
+                setIsTextExportModalOpen(true);
+              }}
+              title="Выгрузить контент-план подневно в текстовом виде (.txt / .md / буфер обмена)"
+            >
+              <FileText size={13} />
+              <span className="btn-text-desktop">Текст подневно</span>
+              <span className="btn-text-mobile">Текст</span>
+            </button>
+
             <a 
               href="./calendar_october_2026.pdf" 
               download="Календарь_Октябрь_2026_Гостинцев_Двор_Чайная_Любовь.pdf" 
@@ -1552,26 +1869,37 @@ export default function App() {
                 </div>
               </div>
 
-              {editMode && (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button 
-                    className="btn btn-outline"
-                    style={{ padding: '5px 8px', fontSize: '11px' }}
-                    onClick={() => openNewMilestoneModal(selectedGridDate)}
-                    title="Добавить условную дату на этот день"
-                  >
-                    <Sparkles size={11} /> + Дата
-                  </button>
-                  <button 
-                    className="btn btn-outline"
-                    style={{ padding: '5px 8px', fontSize: '11px' }}
-                    onClick={() => openNewPostModal(selectedGridDate)}
-                    title="Добавить публикацию на этот день"
-                  >
-                    <Plus size={11} /> + Пост
-                  </button>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <button 
+                  className="btn btn-outline"
+                  style={{ padding: '5px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  onClick={() => copySingleDayText(selectedGridDate)}
+                  title="Скопировать публикации выбранного дня в текстовом виде"
+                >
+                  <Copy size={11} /> Текст дня
+                </button>
+
+                {editMode && (
+                  <>
+                    <button 
+                      className="btn btn-outline"
+                      style={{ padding: '5px 8px', fontSize: '11px' }}
+                      onClick={() => openNewMilestoneModal(selectedGridDate)}
+                      title="Добавить условную дату на этот день"
+                    >
+                      <Sparkles size={11} /> + Дата
+                    </button>
+                    <button 
+                      className="btn btn-outline"
+                      style={{ padding: '5px 8px', fontSize: '11px' }}
+                      onClick={() => openNewPostModal(selectedGridDate)}
+                      title="Добавить публикацию на этот день"
+                    >
+                      <Plus size={11} /> + Пост
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Праздник или маркет дня */}
@@ -1922,26 +2250,38 @@ export default function App() {
                       </div>
                     )}
 
-                    {editMode && (
-                      <div className="feed-header-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-                        <button 
-                          className="btn btn-outline" 
-                          style={{ padding: '4px 8px', fontSize: '11px' }}
-                          onClick={() => openNewMilestoneModal(dateStr)}
-                          title="Добавить условную дату на этот день"
-                        >
-                          <Sparkles size={11} /> + Дата
-                        </button>
-                        <button 
-                          className="btn btn-outline" 
-                          style={{ padding: '4px 8px', fontSize: '11px' }}
-                          onClick={() => openNewPostModal(dateStr)}
-                          title="Добавить публикацию на этот день"
-                        >
-                          <Plus size={11} /> + Пост
-                        </button>
-                      </div>
-                    )}
+                    <div className="feed-header-actions" style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ padding: '4px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => copySingleDayText(dateStr)}
+                        title="Скопировать публикации этого дня в текстовом виде"
+                      >
+                        <Copy size={11} />
+                        <span>Текст дня</span>
+                      </button>
+
+                      {editMode && (
+                        <>
+                          <button 
+                            className="btn btn-outline" 
+                            style={{ padding: '4px 8px', fontSize: '11px' }}
+                            onClick={() => openNewMilestoneModal(dateStr)}
+                            title="Добавить условную дату на этот день"
+                          >
+                            <Sparkles size={11} /> + Дата
+                          </button>
+                          <button 
+                            className="btn btn-outline" 
+                            style={{ padding: '4px 8px', fontSize: '11px' }}
+                            onClick={() => openNewPostModal(dateStr)}
+                            title="Добавить публикацию на этот день"
+                          >
+                            <Plus size={11} /> + Пост
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   <div className="feed-cards-grid">
@@ -2311,6 +2651,17 @@ export default function App() {
                 )}
 
                 <div className="footer-right-buttons">
+                  {!isNewPost && selectedPost && (
+                    <button 
+                      type="button" 
+                      className="btn btn-outline" 
+                      onClick={() => copySinglePostText(selectedPost)}
+                      title="Скопировать эту публикацию в текстовом виде"
+                    >
+                      <Copy size={13} /> Текст поста
+                    </button>
+                  )}
+
                   <button type="button" className="btn btn-secondary" onClick={() => setIsEditModalOpen(false)}>
                     Закрыть
                   </button>
@@ -2872,6 +3223,162 @@ export default function App() {
                 <button type="button" className="btn btn-secondary" onClick={() => setIsPublishModalOpen(false)}>
                   Закрыть
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          МОДАЛЬНОЕ ОКНО: ВЫГРУЗКА ПЛАНА ПОДНЕВНО В ТЕКСТОВОМ ВИДЕ
+          ======================================================== */}
+      {isTextExportModalOpen && (
+        <div 
+          className="modal-backdrop" 
+          onClick={() => setIsTextExportModalOpen(false)}
+        >
+          <div className="modal-card text-export-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-banner banner-fair">
+              <div className="modal-header-info">
+                <span className="modal-category-badge">
+                  <FileText size={13} /> Текстовый экспорт
+                </span>
+                <h3 className="modal-title-text" style={{ fontSize: '18px' }}>
+                  📋 Выгрузка контент-плана подневно
+                </h3>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsTextExportModalOpen(false)} title="Закрыть">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-form-body">
+              {/* Панель настроек и фильтров */}
+              <div className="export-controls-grid">
+                <div className="form-field">
+                  <label className="field-label">Период выгрузки</label>
+                  <select 
+                    className="craft-select" 
+                    value={textExportPeriod} 
+                    onChange={(e) => setTextExportPeriod(e.target.value)}
+                  >
+                    <option value="all_october">📅 Весь октябрь 2026 (все недели)</option>
+                    <option value="w1">1 неделя: 28.09 – 04.10</option>
+                    <option value="w2">2 неделя: 05.10 – 11.10</option>
+                    <option value="w3">3 неделя: 12.10 – 18.10</option>
+                    <option value="w4">4 неделя: 19.10 – 25.10</option>
+                    <option value="w5">5 неделя: 26.10 – 31.10</option>
+                    <option value="selected_day">📍 Только выбранный день ({selectedGridDate})</option>
+                    <option value="all_history">📚 Все публикации базы (включая архив)</option>
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">Сообщество</label>
+                  <select 
+                    className="craft-select" 
+                    value={textExportProject} 
+                    onChange={(e) => setTextExportProject(e.target.value)}
+                  >
+                    <option value="all">🎪🌿 Все сообщества (Ярмарка + Чай)</option>
+                    <option value="fair">🎪 Только «Гостинцев двор» (Ярмарка)</option>
+                    <option value="tea">🌿 Только «Чайная любовь» (Чай & мёд)</option>
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label className="field-label">Формат файла</label>
+                  <select 
+                    className="craft-select" 
+                    value={textExportFormat} 
+                    onChange={(e) => setTextExportFormat(e.target.value)}
+                  >
+                    <option value="txt">📄 Простой текст (.txt) — для сообщений и печати</option>
+                    <option value="md">📝 Markdown (.md) — для баз знаний и заметок</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Чекбоксы детализации */}
+              <div className="export-checkboxes-row">
+                <label className="export-checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={textExportIncludeDetails} 
+                    onChange={(e) => setTextExportIncludeDetails(e.target.checked)} 
+                  />
+                  <span>Включать подробные тезисы (смысл, визуал, CTA, ссылки на черновики)</span>
+                </label>
+                <label className="export-checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={textExportIncludeMilestones} 
+                    onChange={(e) => setTextExportIncludeMilestones(e.target.checked)} 
+                  />
+                  <span>Включать события и вехи (🍎, 🎪)</span>
+                </label>
+              </div>
+
+              {/* Предпросмотр текста */}
+              <div className="export-preview-header">
+                <span className="export-preview-label">Предпросмотр сформированного текста:</span>
+                <span className="export-preview-stats">
+                  Публикаций: <strong>{currentExportStats.count}</strong> • Символов: <strong>{currentExportText.length}</strong>
+                </span>
+              </div>
+
+              <textarea 
+                className="export-textarea-preview" 
+                readOnly 
+                value={currentExportText} 
+                rows={12}
+                onClick={(e) => e.target.select()}
+                title="Нажмите, чтобы выделить весь текст"
+              />
+
+              <div className="modal-footer" style={{ marginTop: '16px', paddingBottom: 0 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsTextExportModalOpen(false)}>
+                  Закрыть
+                </button>
+
+                <div className="footer-right-buttons">
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    onClick={() => {
+                      const ext = textExportFormat === 'md' ? 'md' : 'txt';
+                      const projSlug = textExportProject === 'fair' ? 'Гостинцев_Двор' : textExportProject === 'tea' ? 'Чайная_Любовь' : 'Гостинцев_Двор_Чайная_Любовь';
+                      const filename = `Контент_план_${projSlug}_${textExportPeriod}.${ext}`;
+                      downloadTextFile(currentExportText, filename);
+                    }}
+                    title="Скачать сформированный текстовый файл на компьютер или телефон"
+                  >
+                    <Download size={14} /> Скачать .{textExportFormat}
+                  </button>
+
+                  <button 
+                    type="button" 
+                    className="btn btn-save" 
+                    onClick={async () => {
+                      const success = await copyTextToClipboard(currentExportText, '📋 Весь подневной план скопирован в буфер обмена!');
+                      if (success) {
+                        setIsCopiedExportText(true);
+                        setTimeout(() => setIsCopiedExportText(false), 2000);
+                      }
+                    }}
+                    title="Скопировать весь сформированный текст в буфер обмена"
+                  >
+                    {isCopiedExportText ? (
+                      <>
+                        <CheckCircle2 size={14} /> Скопировано!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} /> Скопировать в буфер
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
